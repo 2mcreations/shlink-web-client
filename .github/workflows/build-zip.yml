@@ -1,0 +1,54 @@
+name: Build and Zip Production
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Create Zip Archive
+        run: |
+          cd build && zip -r ../public.zip . && cd ..
+
+      - name: Upload Artifact (disponibile in PR e Main)
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-zip-artifact
+          path: public.zip
+
+      - name: Create GitHub Release (solo su Main)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: public.zip
+          # Usa il numero della build come versione (es: v1.0.12)
+          tag_name: v1.0.${{ github.run_number }}
+          name: Release v1.0.${{ github.run_number }}
+          body: |
+            Build automatica della branca main.
+            Scarica `public.zip` per l'installazione su cPanel.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
