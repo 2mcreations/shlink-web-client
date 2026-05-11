@@ -1,10 +1,12 @@
-import { faCogs as cogsIcon } from '@fortawesome/free-solid-svg-icons';
+import { faAddressCard as vcardIcon, faCogs as cogsIcon } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { NavBar } from '@shlinkio/shlink-frontend-kit';
 import type { FC } from 'react';
 import { Link, useLocation } from 'react-router';
 import { ServersDropdown } from '../servers/ServersDropdown';
 import { ShlinkLogo } from './img/ShlinkLogo';
+
+const SMARTVCARD_PATH = 'https://vcard.obiettivoqr.it';
 
 export const MainHeader: FC = () => {
   const { pathname } = useLocation();
@@ -26,6 +28,14 @@ export const MainHeader: FC = () => {
         className="flex items-center gap-1.5"
       >
         <FontAwesomeIcon icon={cogsIcon} /> Settings
+      </NavBar.MenuItem>
+      <NavBar.MenuItem
+        to={SMARTVCARD_PATH}
+        active={false}
+        className="flex items-center gap-1.5"
+        reloadDocument
+      >
+        <FontAwesomeIcon icon={vcardIcon} /> SmartVCard
       </NavBar.MenuItem>
       <ServersDropdown />
     </NavBar>
