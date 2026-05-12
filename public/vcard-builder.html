@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>vCard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root,[data-theme="light"]{
+  --bg:#f7f6f2;--surface:#f9f8f5;--surface2:#fbfbf9;--offset:#f3f0ec;
+  --border:#d4d1ca;--div:#dcd9d5;
+  --txt:#28251d;--muted:#7a7974;--faint:#bab9b4;
+  --pri:#01696f;--pri-h:#0c4e54;--pri-a:#0f3638;--pri-hl:#cedcd8;
+  --err:#a12c7b;--ok:#437a22;
+  --ff:'Inter',sans-serif;--fd:'Instrument Serif',Georgia,serif;
+  --xs:clamp(.75rem,.7rem + .25vw,.875rem);--sm:clamp(.875rem,.8rem + .35vw,1rem);
+  --base:clamp(1rem,.95rem + .25vw,1.125rem);--lg:clamp(1.125rem,1rem + .75vw,1.5rem);
+  --xl:clamp(1.5rem,1.2rem + 1.25vw,2.25rem);
+  --s1:.25rem;--s2:.5rem;--s3:.75rem;--s4:1rem;--s5:1.25rem;--s6:1.5rem;
+  --s8:2rem;--s10:2.5rem;--s16:4rem;
+  --r:var(--s2);--rm:var(--s2);--rl:.75rem;--rxl:1rem;--rfull:9999px;
+  --sh0:0 1px 2px oklch(0.2 0.01 80/.06);
+  --sh1:0 4px 12px oklch(0.2 0.01 80/.08);
+  --sh2:0 12px 32px oklch(0.2 0.01 80/.12);
+  --t:180ms cubic-bezier(.16,1,.3,1);
+}
+[data-theme="dark"]{
+  --bg:#171614;--surface:#1c1b19;--surface2:#201f1d;--offset:#222120;
+  --border:#393836;--div:#262523;
+  --txt:#cdccca;--muted:#797876;--faint:#5a5957;
+  --pri:#4f98a3;--pri-h:#227f8b;--pri-a:#1a626b;--pri-hl:#313b3b;
+  --err:#d163a7;--ok:#6daa45;
+  --sh0:0 1px 2px oklch(0 0 0/.2);--sh1:0 4px 12px oklch(0 0 0/.3);--sh2:0 12px 32px oklch(0 0 0/.4);
+}
+@media(prefers-color-scheme:dark){:root:not([data-theme]){
+  --bg:#171614;--surface:#1c1b19;--surface2:#201f1d;--offset:#222120;
+  --border:#393836;--div:#262523;--txt:#cdccca;--muted:#797876;--faint:#5a5957;
+  --pri:#4f98a3;--pri-h:#227f8b;--pri-hl:#313b3b;
+}}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-font-smoothing:antialiased}
+body{min-height:100dvh;font-family:var(--ff);font-size:var(--base);color:var(--txt);background:var(--bg);line-height:1.6}
+svg,img{display:block;max-width:100%}
+input,button,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:none}
+:focus-visible{outline:2px solid var(--pri);outline-offset:3px;border-radius:var(--r)}
+.app{display:grid;grid-template-rows:auto 1fr;min-height:100dvh}
+
+/* ── HEADER ── */
+header{background:var(--surface);border-bottom:1px solid oklch(from var(--txt) l c h/.08);
+  padding:var(--s3) var(--s6);display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:200;backdrop-filter:blur(8px);box-shadow:var(--sh0)}
+.logo{display:flex;align-items:center;gap:var(--s3)}
+.logo svg{color:var(--pri);flex-shrink:0}
+.logo-text{font-family:var(--fd);font-size:var(--lg)}
+.logo-text span{color:var(--pri)}
+.hdr-r{display:flex;align-items:center;gap:var(--s3)}
+.btn-icon{width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+  border-radius:var(--rm);color:var(--muted);transition:color var(--t),background var(--t)}
+.btn-icon:hover{background:var(--offset);color:var(--txt)}
+.tabs{display:flex;gap:var(--s1);background:var(--offset);border-radius:var(--rl);padding:var(--s1)}
+.tab{padding:var(--s2) var(--s4);border-radius:var(--rm);font-size:var(--sm);color:var(--muted);transition:all var(--t)}
+.tab.on{background:var(--surface);color:var(--txt);box-shadow:var(--sh0);font-weight:600}
+.tab:hover:not(.on){color:var(--txt);background:oklch(from var(--txt) l c h/.05)}
+.badge{display:inline-flex;align-items:center;gap:var(--s2);
+  background:var(--pri-hl);color:var(--pri);
+  padding:var(--s1) var(--s3);border-radius:var(--rfull);font-size:var(--xs);font-weight:500}
+.badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+.badge.err-badge{background:oklch(from var(--err) l c h/.12);color:var(--err)}
+
+/* ── LOADING ── */
+#loader{position:fixed;inset:0;z-index:999;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--s4)}
+#loader.gone{display:none}
+.spin{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--pri);
+  border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── MAIN ── */
+main{padding:var(--s8) var(--s6);max-width:1100px;margin:0 auto;width:100%}
+.view{display:none;animation:fi .2s ease}.view.on{display:block}
+@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.sec-hdr{margin-bottom:var(--s8)}
+.sec-hdr h2{font-family:var(--fd);font-size:var(--xl);font-weight:400;margin-bottom:var(--s1)}
+.sec-hdr p{color:var(--muted);font-size:var(--sm)}
+.sec-hdr-row{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--s4);flex-wrap:wrap}
+
+/* ── BANNERS ── */
+.err-box{background:oklch(from var(--err) l c h/.08);border:1px solid oklch(from var(--err) l c h/.25);
+  border-radius:var(--rm);padding:var(--s4) var(--s5);color:var(--err);font-size:var(--sm);
+  margin-bottom:var(--s6);display:flex;align-items:flex-start;gap:var(--s3)}
+.err-box svg{flex-shrink:0;margin-top:1px}
+
+/* ── FORM ── */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:var(--s5)}
+@media(max-width:640px){.grid2{grid-template-columns:1fr}}
+.full{grid-column:1/-1}
+.fg{display:flex;flex-direction:column;gap:var(--s2)}
+.fg label{font-size:var(--sm);font-weight:500}
+.fg label .req{color:var(--err);margin-left:2px}
+.fg input,.fg textarea{
+  padding:var(--s3) var(--s4);
+  border:1px solid oklch(from var(--txt) l c h/.14);border-radius:var(--rm);
+  background:var(--surface);font-size:var(--sm);
+  transition:border-color var(--t),box-shadow var(--t)}
+.fg input:focus,.fg textarea:focus{border-color:var(--pri);
+  box-shadow:0 0 0 3px oklch(from var(--pri) l c h/.14);outline:none}
+.fg textarea{resize:vertical;min-height:80px}
+.hint{font-size:var(--xs);color:var(--muted)}
+.hint code{background:var(--offset);padding:1px 4px;border-radius:3px;font-size:.85em}
+.fsec{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--rl);padding:var(--s6);margin-bottom:var(--s5)}
+.ftit{font-size:var(--xs);font-weight:700;color:var(--pri);text-transform:uppercase;
+  letter-spacing:.08em;margin-bottom:var(--s5);display:flex;align-items:center;gap:var(--s2)}
+.ftit svg{width:13px;height:13px;flex-shrink:0}
+.slug-row{display:flex;align-items:stretch;background:var(--surface);
+  border:1px solid oklch(from var(--txt) l c h/.14);border-radius:var(--rm);overflow:hidden}
+.slug-pfx{padding:var(--s3);font-size:var(--xs);color:var(--muted);
+  border-right:1px solid oklch(from var(--txt) l c h/.1);background:var(--offset);
+  display:flex;align-items:center;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slug-row input{border:none!important;background:transparent!important;
+  box-shadow:none!important;border-radius:0!important;flex:1;min-width:0}
+
+/* ── BUTTONS ── */
+.btn-pri{display:inline-flex;align-items:center;gap:var(--s2);
+  padding:var(--s3) var(--s6);background:var(--pri);color:#fff;
+  border-radius:var(--rm);font-size:var(--sm);font-weight:600;
+  transition:background var(--t),box-shadow var(--t);border:none}
+.btn-pri:hover{background:var(--pri-h);box-shadow:var(--sh1)}
+.btn-pri:disabled{opacity:.5;cursor:not-allowed}
+.btn-sec{display:inline-flex;align-items:center;gap:var(--s2);
+  padding:var(--s3) var(--s5);background:transparent;color:var(--pri);
+  border:1px solid var(--pri);border-radius:var(--rm);font-size:var(--sm);font-weight:600;transition:all var(--t)}
+.btn-sec:hover{background:var(--pri-hl)}
+.form-acts{display:flex;align-items:center;gap:var(--s4);
+  padding-top:var(--s6);border-top:1px solid var(--div);flex-wrap:wrap}
+
+/* ── SAVED LIST ── */
+.vlist{display:flex;flex-direction:column;gap:var(--s4)}
+.vi{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);
+  padding:var(--s5);display:grid;grid-template-columns:auto 1fr auto;
+  gap:var(--s4);align-items:start;transition:box-shadow var(--t)}
+.vi:hover{box-shadow:var(--sh1)}
+.av{width:48px;height:48px;border-radius:var(--rfull);background:var(--pri-hl);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--fd);font-size:var(--lg);color:var(--pri);flex-shrink:0}
+.vi-info h3{font-size:var(--base);font-weight:600;margin-bottom:2px}
+.vi-info .sub{font-size:var(--sm);color:var(--muted);margin-bottom:var(--s2)}
+.tags-row{display:flex;flex-wrap:wrap;gap:var(--s1);margin-bottom:var(--s2)}
+.tag{background:var(--offset);border:1px solid var(--border);border-radius:var(--rfull);
+  padding:2px var(--s2);font-size:var(--xs);color:var(--muted)}
+.tag.tv{background:var(--pri-hl);color:var(--pri);border-color:transparent}
+.link-row{display:flex;align-items:center;gap:var(--s2)}
+.lchip{display:inline-flex;align-items:center;gap:var(--s2);
+  background:var(--offset);border:1px solid var(--border);border-radius:var(--rfull);
+  padding:var(--s1) var(--s3);font-size:var(--xs);font-family:monospace;max-width:260px;overflow:hidden}
+.lchip a{color:var(--pri);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lchip a:hover{text-decoration:underline}
+.cbtn{cursor:pointer;color:var(--faint);transition:color var(--t);flex-shrink:0;border:none;background:none;padding:0;line-height:0}
+.cbtn:hover{color:var(--pri)}
+.vi-acts{display:flex;flex-direction:column;gap:var(--s2);flex-shrink:0}
+.bs{padding:var(--s2) var(--s3);border-radius:var(--rm);font-size:var(--xs);font-weight:500;
+  white-space:nowrap;display:inline-flex;align-items:center;gap:var(--s1);
+  transition:all var(--t);cursor:pointer;border:none}
+.bs-pri{background:var(--pri);color:#fff}.bs-pri:hover{background:var(--pri-h)}
+.bs-ghost{background:transparent;color:var(--muted);border:1px solid oklch(from var(--txt) l c h/.12)}
+.bs-ghost:hover{background:var(--offset);color:var(--txt)}
+.bs-qr{background:transparent;color:var(--pri);border:1px solid oklch(from var(--pri) l c h/.3)}
+.bs-qr:hover{background:var(--pri-hl)}
+.bs-del{background:transparent;color:var(--err);border:1px solid oklch(from var(--err) l c h/.2)}
+.bs-del:hover{background:oklch(from var(--err) l c h/.06)}
+
+/* ── SKELETON ── */
+@keyframes shim{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.skel{background:linear-gradient(90deg,var(--offset) 25%,var(--surface2) 50%,var(--offset) 75%);
+  background-size:200% 100%;animation:shim 1.5s ease-in-out infinite;border-radius:var(--rl)}
+.skel-card{height:90px;margin-bottom:var(--s4)}
+
+/* ── EMPTY ── */
+.empty{display:flex;flex-direction:column;align-items:center;text-align:center;
+  padding:var(--s16) var(--s8);color:var(--muted)}
+.empty svg{margin-bottom:var(--s4);opacity:.2}
+.empty h3{color:var(--txt);font-size:var(--lg);margin-bottom:var(--s2);font-weight:400;font-family:var(--fd)}
+.empty p{font-size:var(--sm);max-width:36ch;margin-bottom:var(--s6)}
+
+/* ── VCARD PREVIEW ── */
+#view-vc .vc-card{max-width:440px;margin:var(--s6) auto 0;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--rxl);overflow:hidden;box-shadow:var(--sh2)}
+.vc-hero{background:linear-gradient(135deg,var(--pri),var(--pri-h));
+  padding:var(--s10) var(--s8) var(--s6);display:flex;flex-direction:column;align-items:center;text-align:center}
+.vc-av{width:80px;height:80px;border-radius:var(--rfull);background:rgba(255,255,255,.2);
+  border:3px solid rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center;
+  font-family:var(--fd);font-size:2rem;color:#fff;margin-bottom:var(--s4)}
+.vc-hero h1{font-family:var(--fd);font-size:var(--xl);font-weight:400;color:#fff;margin-bottom:var(--s1)}
+.vc-hero .role{font-size:var(--sm);color:rgba(255,255,255,.75)}
+.vc-hero .org{font-size:var(--xs);color:rgba(255,255,255,.55);margin-top:2px}
+.vc-body{padding:var(--s5) var(--s6)}
+.vc-row{display:flex;align-items:flex-start;gap:var(--s4);padding:var(--s3) 0;border-bottom:1px solid var(--div)}
+.vc-row:last-of-type{border-bottom:none}
+.vc-ico{width:34px;height:34px;border-radius:var(--rm);background:var(--pri-hl);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--pri)}
+.vc-ico svg{width:15px;height:15px}
+.vc-c{flex:1;min-width:0}
+.vc-lbl{font-size:var(--xs);color:var(--muted);margin-bottom:2px;text-transform:uppercase;letter-spacing:.04em}
+.vc-val{font-size:var(--sm);word-break:break-all}
+.vc-val a{color:var(--pri);text-decoration:none}.vc-val a:hover{text-decoration:underline}
+.vc-foot{padding:var(--s5) var(--s6);border-top:1px solid var(--div);
+  display:flex;flex-direction:column;gap:var(--s3);align-items:center}
+.vc-dl{width:100%;display:flex;align-items:center;justify-content:center;gap:var(--s2);
+  padding:var(--s4);background:var(--pri);color:#fff;border-radius:var(--rm);
+  font-size:var(--sm);font-weight:600;transition:background var(--t);border:none;cursor:pointer}
+.vc-dl:hover{background:var(--pri-h)}
+.vc-pw{font-size:var(--xs);color:var(--faint)}
+
+/* ══════════════════════════════════════════════
+   QR MODAL
+══════════════════════════════════════════════ */
+.modal-overlay{
+  position:fixed;inset:0;z-index:500;
+  background:oklch(0 0 0/.55);
+  display:flex;align-items:center;justify-content:center;
+  padding:var(--s4);
+  opacity:0;pointer-events:none;transition:opacity .2s ease;
+}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--rxl);box-shadow:var(--sh2);
+  width:100%;max-width:480px;overflow:hidden;
+  transform:translateY(12px) scale(.97);transition:transform .2s ease;
+}
+.modal-overlay.open .modal{transform:none}
+.modal-head{display:flex;align-items:center;justify-content:space-between;
+  padding:var(--s5) var(--s6);border-bottom:1px solid var(--div)}
+.modal-head h3{font-family:var(--fd);font-size:var(--lg);font-weight:400}
+.modal-body{padding:var(--s6)}
+
+/* QR preview area */
+.qr-preview{
+  display:flex;align-items:center;justify-content:center;
+  background:var(--offset);border:1px solid var(--border);
+  border-radius:var(--rl);min-height:200px;margin-bottom:var(--s6);
+  position:relative;overflow:hidden;
+}
+.qr-preview canvas{border-radius:var(--r);max-width:100%;height:auto!important}
+
+/* QR controls grid */
+.qr-controls{display:grid;grid-template-columns:1fr 1fr;gap:var(--s4);margin-bottom:var(--s5)}
+@media(max-width:400px){.qr-controls{grid-template-columns:1fr}}
+.qr-fg{display:flex;flex-direction:column;gap:var(--s2)}
+.qr-fg label{font-size:var(--xs);font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.qr-fg input[type=number],.qr-fg select{
+  padding:var(--s2) var(--s3);border:1px solid oklch(from var(--txt) l c h/.14);
+  border-radius:var(--rm);background:var(--surface);font-size:var(--sm);
+  transition:border-color var(--t),box-shadow var(--t)}
+.qr-fg input[type=number]:focus,.qr-fg select:focus{
+  border-color:var(--pri);box-shadow:0 0 0 3px oklch(from var(--pri) l c h/.14);outline:none}
+.qr-color-row{display:flex;align-items:center;gap:var(--s3)}
+.qr-color-row input[type=color]{
+  width:36px;height:36px;padding:2px;border:1px solid oklch(from var(--txt) l c h/.14);
+  border-radius:var(--rm);cursor:pointer;background:var(--surface);flex-shrink:0}
+.qr-color-row span{font-size:var(--xs);color:var(--muted)}
+.qr-full{grid-column:1/-1}
+.qr-actions{display:flex;gap:var(--s3);flex-wrap:wrap}
+
+/* ── TOAST ── */
+.toasts{position:fixed;bottom:var(--s6);right:var(--s6);z-index:9999;
+  display:flex;flex-direction:column;gap:var(--s2)}
+.toast{background:var(--txt);color:var(--bg);padding:var(--s3) var(--s5);
+  border-radius:var(--rm);font-size:var(--sm);box-shadow:var(--sh2);
+  animation:ti .2s ease;display:flex;align-items:center;gap:var(--s2);min-width:220px}
+.toast.ok{background:#437a22}.toast.err{background:#a12c7b}
+@keyframes ti{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+
+@media(max-width:768px){
+  main{padding:var(--s4)}
+  .vi{grid-template-columns:auto 1fr;grid-template-rows:auto auto}
+  .vi-acts{grid-column:1/-1;flex-direction:row;flex-wrap:wrap}
+  header{padding:var(--s3) var(--s4)}
+  .slug-pfx{display:none}
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+</head>
+<body>
+<div class="app">
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="spin"></div>
+  <span style="font-size:var(--sm);color:var(--muted)">Caricamento servers.json…</span>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <rect x="3" y="5" width="22" height="18" rx="3" stroke="currentColor" stroke-width="2"/>
+      <circle cx="10" cy="13" r="3" fill="currentColor" opacity=".6"/>
+      <line x1="15" y1="11" x2="22" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="15" y1="14" x2="20" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <span class="logo-text">vCard <span>Builder</span></span>
+  </div>
+  <div class="hdr-r">
+    <span class="badge" id="srv-badge" style="display:none">
+      <span class="dot"></span><span id="srv-name">–</span>
+    </span>
+    <div class="tabs">
+      <button class="tab on" onclick="sw('create')" id="tab-create">Crea</button>
+      <button class="tab"    onclick="sw('saved')"  id="tab-saved">Salvate</button>
+    </div>
+    <button class="btn-icon" data-theme-toggle title="Cambia tema">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    </button>
+  </div>
+</header>
+
+<main>
+
+<!-- ╔═══════ CREATE ═══════╗ -->
+<div class="view on" id="view-create">
+  <div class="sec-hdr">
+    <h2>Nuova vCard</h2>
+    <p>Compila i campi. La vCard viene salvata su Shlink come short URL con tag <code>vcard</code>.</p>
+  </div>
+  <div id="create-msg"></div>
+  <form id="vcf" onsubmit="saveVC(event)">
+
+    <div class="fsec">
+      <div class="ftit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>Identità</div>
+      <div class="grid2">
+        <div class="fg"><label>Nome <span class="req">*</span></label><input id="fn" placeholder="Mario" required></div>
+        <div class="fg"><label>Cognome <span class="req">*</span></label><input id="ln" placeholder="Rossi" required></div>
+        <div class="fg"><label>Nome visualizzato</label><input id="dn" placeholder="Auto-compilato se vuoto"></div>
+        <div class="fg"><label>Prefisso</label><input id="px" placeholder="Dott., Ing."></div>
+        <div class="fg"><label>Suffisso</label><input id="sx" placeholder="PhD, Jr."></div>
+        <div class="fg"><label>Nickname</label><input id="nn" placeholder="Mario"></div>
+      </div>
+    </div>
+
+    <div class="fsec">
+      <div class="ftit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>Lavoro</div>
+      <div class="grid2">
+        <div class="fg"><label>Azienda</label><input id="org" placeholder="Acme Srl"></div>
+        <div class="fg"><label>Dipartimento</label><input id="dep" placeholder="Marketing"></div>
+        <div class="fg full"><label>Ruolo / Titolo</label><input id="tit" placeholder="Responsabile commerciale"></div>
+      </div>
+    </div>
+
+    <div class="fsec">
+      <div class="ftit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 11.27 19 19.44 19.44 0 0 1 5 12.72 19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Contatti</div>
+      <div class="grid2">
+        <div class="fg"><label>Telefono WORK</label><input type="tel" id="p1" placeholder="+39 02 1234567"></div>
+        <div class="fg"><label>Cellulare CELL</label><input type="tel" id="p2" placeholder="+39 333 1234567"></div>
+        <div class="fg"><label>Telefono HOME</label><input type="tel" id="p3" placeholder="+39…"></div>
+        <div class="fg"><label>Fax</label><input type="tel" id="fx" placeholder="+39 02 9876543"></div>
+        <div class="fg"><label>Email WORK</label><input type="email" id="e1" placeholder="mario@acme.it"></div>
+        <div class="fg"><label>Email secondaria</label><input type="email" id="e2" placeholder="mario@gmail.com"></div>
+        <div class="fg full"><label>Sito web</label><input type="url" id="wb" placeholder="https://www.acme.it"></div>
+      </div>
+    </div>
+
+    <div class="fsec">
+      <div class="ftit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Indirizzo</div>
+      <div class="grid2">
+        <div class="fg full"><label>Via</label><input id="st" placeholder="Via Roma 1"></div>
+        <div class="fg"><label>Città</label><input id="ci" placeholder="Milano"></div>
+        <div class="fg"><label>Provincia</label><input id="re" placeholder="MI"></div>
+        <div class="fg"><label>CAP</label><input id="zp" placeholder="20100"></div>
+        <div class="fg"><label>Paese</label><input id="co" placeholder="Italy"></div>
+      </div>
+    </div>
+
+    <div class="fsec">
+      <div class="ftit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Social & Altro</div>
+      <div class="grid2">
+        <div class="fg"><label>LinkedIn</label><input type="url" id="li" placeholder="https://linkedin.com/in/…"></div>
+        <div class="fg"><label>Twitter / X</label><input type="url" id="tw" placeholder="https://x.com/…"></div>
+        <div class="fg"><label>Instagram</label><input type="url" id="ig" placeholder="https://instagram.com/…"></div>
+        <div class="fg"><label>GitHub</label><input type="url" id="gh" placeholder="https://github.com/…"></div>
+        <div class="fg full"><label>Note</label><textarea id="no" placeholder="Breve bio, note aggiuntive…"></textarea></div>
+      </div>
+    </div>
+
+    <div class="fsec">
+      <div class="ftit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Slug Shlink</div>
+      <div class="fg">
+        <label>Slug personalizzato</label>
+        <div class="slug-row">
+          <span class="slug-pfx" id="slug-pfx">https://…/</span>
+          <input id="slug" placeholder="mario-rossi  (vuoto = auto)">
+        </div>
+        <span class="hint">Lascia vuoto per generazione automatica. Es: <code>mario-rossi</code></span>
+      </div>
+    </div>
+
+    <div class="form-acts">
+      <button type="submit" class="btn-pri" id="sbtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        Genera &amp; Salva su Shlink
+      </button>
+      <button type="button" class="btn-sec" onclick="document.getElementById('vcf').reset()">Azzera</button>
+    </div>
+  </form>
+</div>
+
+<!-- ╔═══════ SAVED ═══════╗ -->
+<div class="view" id="view-saved">
+  <div class="sec-hdr-row sec-hdr">
+    <div>
+      <h2>vCard salvate</h2>
+      <p>Short URL Shlink con tag <code>vcard</code>. Il contatto si scarica all'apertura del link.</p>
+    </div>
+    <button class="btn-sec" onclick="loadSaved()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      Aggiorna
+    </button>
+  </div>
+  <div id="saved-list"></div>
+</div>
+
+<!-- ╔═══════ VCARD VIEW ═══════╗ -->
+<div class="view" id="view-vc">
+  <div id="vc-display"></div>
+</div>
+
+</main>
+</div><!-- .app -->
+
+<!-- ╔═══════════════════════════
+     QR MODAL
+════════════════════════════╗ -->
+<div class="modal-overlay" id="qr-overlay" onclick="closeQR(event)">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="qr-title">
+    <div class="modal-head">
+      <h3 id="qr-title">QR Code</h3>
+      <button class="btn-icon" onclick="closeQRForce()" title="Chiudi">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <!-- preview -->
+      <div class="qr-preview" id="qr-preview">
+        <canvas id="qr-canvas"></canvas>
+      </div>
+
+      <!-- controls -->
+      <div class="qr-controls">
+        <div class="qr-fg">
+          <label>Dimensione (px)</label>
+          <input type="number" id="qr-size" value="300" min="50" max="1000" step="50" oninput="debounceQR()">
+        </div>
+        <div class="qr-fg">
+          <label>Formato</label>
+          <select id="qr-fmt" onchange="refreshQR()">
+            <option value="png" selected>PNG</option>
+            <option value="svg">SVG</option>
+          </select>
+        </div>
+        <div class="qr-fg">
+          <label>Error correction</label>
+          <select id="qr-ec" onchange="refreshQR()">
+            <option value="L">L — bassa (7%)</option>
+            <option value="M" selected>M — media (15%)</option>
+            <option value="Q">Q — alta (25%)</option>
+            <option value="H">H — massima (30%)</option>
+          </select>
+        </div>
+        <div class="qr-fg">
+          <label>Margine</label>
+          <input type="number" id="qr-margin" value="1" min="0" max="10" oninput="debounceQR()">
+        </div>
+        <div class="qr-fg">
+          <label>Colore QR</label>
+          <div class="qr-color-row">
+            <input type="color" id="qr-color" value="#000000" oninput="debounceQR()">
+            <span id="qr-color-val">#000000</span>
+          </div>
+        </div>
+        <div class="qr-fg">
+          <label>Sfondo</label>
+          <div class="qr-color-row">
+            <input type="color" id="qr-bg" value="#ffffff" oninput="debounceQR()">
+            <span id="qr-bg-val">#ffffff</span>
+          </div>
+        </div>
+        <div class="qr-fg qr-full" style="margin-top:var(--s2)">
+          <span class="hint" id="qr-url-hint" style="word-break:break-all"></span>
+        </div>
+      </div>
+
+      <!-- actions -->
+      <div class="qr-actions">
+        <button class="btn-pri" onclick="downloadQR()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Scarica QR
+        </button>
+        <button class="btn-sec" onclick="copyQRUrl()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copia link QR
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+'use strict';
+
+// ── THEME ──
+(()=>{
+  const btn=document.querySelector('[data-theme-toggle]'),r=document.documentElement;
+  let d=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';
+  r.setAttribute('data-theme',d);
+  btn?.addEventListener('click',()=>{d=d==='dark'?'light':'dark';r.setAttribute('data-theme',d);});
+})();
+
+// ── STATE ──
+let CFG=null;        // {name, url, apiKey}
+let PAGE_URL=window.location.origin+'/vc/';
+
+// QR modal state
+let qrShortCode='';
+let qrShortUrl='';
+let qrTimer=null;
+const vcStore=new Map();
+
+// ── BOOT ──
+(async()=>{
+  const loader=document.getElementById('loader');
+  const vc=new URLSearchParams(window.location.search).get('vc');
+  if(vc){ loader.classList.add('gone'); openFromParam(vc); return; }
+
+  try{
+    const r=await fetch('./servers.json');
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const json=await r.json();
+    const servers=Array.isArray(json)?json:(json.servers||[]);
+    if(!servers.length) throw new Error('Nessun server');
+    const s=servers.find(x=>x.autoConnect)||servers[0];
+    if(!s.url||!s.apiKey) throw new Error('url o apiKey mancanti');
+    CFG={name:s.name||s.url, url:s.url.replace(/\/$/,''), apiKey:s.apiKey};
+    const badge=document.getElementById('srv-badge');
+    badge.style.display='inline-flex';
+    document.getElementById('srv-name').textContent=CFG.name;
+    document.getElementById('slug-pfx').textContent=CFG.url+'/';
+  }catch(e){
+    const badge=document.getElementById('srv-badge');
+    badge.style.display='inline-flex';badge.classList.add('err-badge');
+    document.getElementById('srv-name').textContent='servers.json non trovato';
+    document.getElementById('create-msg').innerHTML=
+      `<div class="err-box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span>Impossibile leggere <code>servers.json</code>: <b>${esc(e.message)}</b></span></div>`;
+  }
+  loader.classList.add('gone');
+})();
+
+// ── VIEWS ──
+function sw(v){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(el=>el.classList.remove('on'));
+  document.getElementById('view-'+v).classList.add('on');
+  const t=document.getElementById('tab-'+v);
+  if(t) t.classList.add('on');
+  if(v==='saved') loadSaved();
+}
+function swRaw(v){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(el=>el.classList.remove('on'));
+  document.getElementById('view-'+v).classList.add('on');
+}
+
+// ── FORM ──
+const gv=id=>document.getElementById(id)?.value.trim()||'';
+function collect(){
+  return{fn:gv('fn'),ln:gv('ln'),dn:gv('dn'),px:gv('px'),sx:gv('sx'),nn:gv('nn'),
+    org:gv('org'),dep:gv('dep'),tit:gv('tit'),
+    p1:gv('p1'),p2:gv('p2'),p3:gv('p3'),fx:gv('fx'),
+    e1:gv('e1'),e2:gv('e2'),wb:gv('wb'),
+    st:gv('st'),ci:gv('ci'),re:gv('re'),zp:gv('zp'),co:gv('co'),
+    li:gv('li'),tw:gv('tw'),ig:gv('ig'),gh:gv('gh'),no:gv('no')};
+}
+
+// ── BUILD VCARD ──
+function buildVC(d){
+  const fn=d.dn||`${d.fn} ${d.ln}`;
+  const L=[
+    'BEGIN:VCARD','VERSION:3.0',
+    `FN:${fn}`,`N:${d.ln};${d.fn};${d.px};${d.sx}`
+  ];
+  if(d.nn) L.push(`NICKNAME:${d.nn}`);
+  if(d.org&&d.dep) L.push(`ORG:${d.org};${d.dep}`);
+  else if(d.org) L.push(`ORG:${d.org}`);
+  if(d.tit) L.push(`TITLE:${d.tit}`);
+  if(d.p1)  L.push(`TEL;TYPE=WORK,VOICE:${d.p1}`);
+  if(d.p2)  L.push(`TEL;TYPE=CELL:${d.p2}`);
+  if(d.p3)  L.push(`TEL;TYPE=HOME:${d.p3}`);
+  if(d.fx)  L.push(`TEL;TYPE=FAX:${d.fx}`);
+  if(d.e1)  L.push(`EMAIL;TYPE=WORK:${d.e1}`);
+  if(d.e2)  L.push(`EMAIL;TYPE=PERSONAL:${d.e2}`);
+  if(d.wb)  L.push(`URL:${d.wb}`);
+  if(d.st||d.ci) L.push(`ADR;TYPE=WORK:;;${d.st};${d.ci};${d.re};${d.zp};${d.co}`);
+  if(d.li)  L.push(`X-SOCIALPROFILE;TYPE=linkedin:${d.li}`);
+  if(d.tw)  L.push(`X-SOCIALPROFILE;TYPE=twitter:${d.tw}`);
+  if(d.ig)  L.push(`X-SOCIALPROFILE;TYPE=instagram:${d.ig}`);
+  if(d.gh)  L.push(`X-SOCIALPROFILE;TYPE=github:${d.gh}`);
+  if(d.no)  L.push(`NOTE:${d.no}`);
+  L.push(`REV:${new Date().toISOString()}`,'END:VCARD');
+  return L.join('\r\n');
+}
+
+// ── SHLINK API ──
+const aUrl=p=>`${CFG.url}/rest/v3${p}`;
+const aHdr=()=>({'X-Api-Key':CFG.apiKey,'Content-Type':'application/json','Accept':'application/json'});
+async function aPost(p,body){
+  const r=await fetch(aUrl(p),{method:'POST',headers:aHdr(),body:JSON.stringify(body)});
+  const j=await r.json();
+  if(!r.ok) throw new Error(j.detail||j.title||'Errore '+r.status);
+  return j;
+}
+async function aDel(p){
+  const r=await fetch(aUrl(p),{method:'DELETE',headers:aHdr()});
+  if(!r.ok&&r.status!==204){const j=await r.json().catch(()=>({}));throw new Error(j.detail||j.title||'Errore '+r.status);}
+}
+async function aGetAll(p,extra=''){
+  let page=1,items=[],total=Infinity;
+  while(items.length<total){
+    const r=await fetch(`${aUrl(p)}?page=${page}&itemsPerPage=50${extra}`,{headers:aHdr()});
+    const j=await r.json();
+    if(!r.ok) throw new Error(j.detail||j.title||'Errore '+r.status);
+    const w=j.shortUrls||j,data=w.data||[],pag=w.pagination||{};
+    total=pag.totalItems??data.length;
+    items.push(...data);
+    if(!data.length||items.length>=total) break;
+    page++;
+  }
+  return items;
+}
+
+// ── SAVE ──
+async function saveVC(e){
+  e.preventDefault();
+  if(!CFG){toast('Configurazione Shlink non disponibile','err');return;}
+  const d=collect();
+  if(!d.fn||!d.ln){toast('Nome e Cognome obbligatori','err');return;}
+  const btn=document.getElementById('sbtn');
+  btn.disabled=true;
+  btn.innerHTML=`<div class="spin" style="width:16px;height:16px;border-width:2px;margin:0"></div> Salvataggio…`;
+  try{
+    const vcStr=buildVC(d);
+    const enc=btoa(unescape(encodeURIComponent(vcStr)));
+    const fname=d.dn||`${d.fn} ${d.ln}`;
+    const longUrl=`${PAGE_URL}?vc=${encodeURIComponent(enc)}`;
+    const slug=gv('slug')||undefined;
+    const tags=['vcard'];
+    if(d.org) tags.push('org:'+d.org.toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,30));
+    const res=await aPost('/short-urls',{longUrl,...(slug?{customSlug:slug}:{}),findIfExists:false,tags,title:fname});
+    toast(`"${fname}" salvata!`,'ok');
+    try{await navigator.clipboard.writeText(res.shortUrl);toast('Link copiato!');}catch(_){}
+    document.getElementById('vcf').reset();
+    showPreview({shortUrl:res.shortUrl,shortCode:res.shortCode,longUrl,title:fname,tags:res.tags,vcStr,parsed:d});
+    swRaw('vc');
+  }catch(err){
+    toast('Errore Shlink: '+err.message,'err');
+  }finally{
+    btn.disabled=false;
+    btn.innerHTML=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg> Genera &amp; Salva su Shlink`;
+  }
+}
+
+// ── SAVED LIST ──
+async function loadSaved(){
+  const el=document.getElementById('saved-list');
+  el.innerHTML=[1,2,3].map(()=>`<div class="skel skel-card"></div>`).join('');
+  try{
+    if(!CFG) throw new Error('Configurazione Shlink non disponibile');
+    const items=await aGetAll('/short-urls','&tags[]=vcard&orderBy=dateCreated-DESC');
+    renderSaved(items);
+  }catch(err){
+    el.innerHTML=`<div class="err-box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>${esc(err.message)}</span></div>`;
+  }
+}
+
+function renderSaved(items){
+  const el=document.getElementById('saved-list');
+  if(!items.length){
+    el.innerHTML=`<div class="empty">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="15" rx="2"/><path d="M8 10h8M8 14h5"/></svg>
+      <h3>Nessuna vCard salvata</h3><p>Crea la tua prima vCard dalla scheda "Crea".</p>
+      <button class="btn-pri" onclick="sw('create')">Crea vCard</button></div>`;
+    return;
+  }
+  vcStore.clear();
+  el.innerHTML=`<div class="vlist">${items.map((item,idx)=>{
+    const fname=item.title||item.shortCode||'–';
+    const tags=item.tags||[];
+    const short=item.shortUrl||'';
+    const long=item.longUrl||'';
+    const sc=item.shortCode||'';
+    const ini=fname.split(' ').map(w=>w[0]||'').slice(0,2).join('').toUpperCase()||'?';
+    const sub=tags.filter(t=>t.startsWith('org:')).map(t=>t.slice(4)).join(' · ');
+    const vis=item.visitsSummary?.total??item.visitsCount??0;
+    // Salvo l'item nello store indicizzato — nessun dato inline nell'onclick
+    vcStore.set(idx, {long, short, sc, fname, tags});
+    return `<div class="vi">
+      <div class="av">${ini}</div>
+      <div class="vi-info">
+        <h3>${esc(fname)}</h3>
+        ${sub?`<div class="sub">${esc(sub)}</div>`:''}
+        <div class="tags-row">
+          ${tags.map(t=>`<span class="tag${t==='vcard'?' tv':''}">${esc(t)}</span>`).join('')}
+          <span class="tag" title="Visite totali">👁 ${vis}</span>
+        </div>
+        <div class="link-row">
+          <div class="lchip">
+            <a href="${esc(short)}" target="_blank" rel="noopener noreferrer">${esc(short)}</a>
+            <button class="cbtn" onclick="copyUrl('${esc(short)}')" title="Copia link">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="vi-acts">
+        <button class="bs bs-pri" onclick="openPreviewFromStore(${idx})">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          Visualizza
+        </button>
+        <button class="bs bs-qr" onclick="openQR('${esc(sc)}','${esc(short)}')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/>
+            <rect x="14" y="14" width="3" height="3" rx=".5"/><rect x="18" y="14" width="3" height="3" rx=".5"/>
+            <rect x="14" y="18" width="3" height="3" rx=".5"/><rect x="18" y="18" width="3" height="3" rx=".5"/>
+          </svg>
+          QR Code
+        </button>
+        <button class="bs bs-ghost" onclick="copyUrl('${esc(short)}')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copia
+        </button>
+        <button class="bs bs-del" onclick="delEntry('${esc(sc)}','${esc(fname)}')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          Elimina
+        </button>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+async function delEntry(sc,name){
+  if(!confirm(`Eliminare la vCard "${name}"?\nViene rimosso lo short URL da Shlink.`)) return;
+  try{await aDel(`/short-urls/${sc}`);toast(`"${name}" eliminata`,'ok');loadSaved();}
+  catch(err){toast('Errore: '+err.message,'err');}
+}
+
+// ── PREVIEW ──
+function openPreviewFromList(longE,shortE,sc,fnE,tags){
+  const long=decodeURIComponent(longE),short=decodeURIComponent(shortE),fname=decodeURIComponent(fnE);
+  try{
+    const vc=new URL(long).searchParams.get('vc');
+    if(!vc) throw new Error('parametro vc mancante');
+    const vcStr=decodeURIComponent(escape(atob(vc)));
+    const parsed=parseVC(vcStr);
+    showPreview({shortUrl:short,shortCode:sc,longUrl:long,title:fname,tags,vcStr,parsed});
+    swRaw('vc');
+  }catch(err){toast('Errore decodifica: '+err.message,'err');}
+}
+
+// Versione sicura: legge i dati dallo store in memoria (evita corruzione da attributo onclick)
+function openPreviewFromStore(idx){
+  const entry=vcStore.get(idx);
+  if(!entry){toast('Errore: item non trovato','err');return;}
+  const {long,short,sc,fname,tags}=entry;
+  try{
+    const vc=new URL(long).searchParams.get('vc');
+    if(!vc) throw new Error('parametro vc mancante nel longUrl');
+    const vcStr=decodeURIComponent(escape(atob(vc)));
+    const parsed=parseVC(vcStr);
+    showPreview({shortUrl:short,shortCode:sc,longUrl:long,title:fname,tags,vcStr,parsed});
+    swRaw('vc');
+  }catch(err){toast('Errore decodifica: '+err.message,'err');}
+}
+
+function openFromParam(vcParam){
+  swRaw('vc');
+  try{
+    const vcStr=decodeURIComponent(escape(atob(vcParam)));
+    const parsed=parseVC(vcStr);
+    const fname=parsed.dn||`${parsed.fn} ${parsed.ln}`;
+    showPreview({shortUrl:'',shortCode:'',longUrl:window.location.href,title:fname,tags:['vcard'],vcStr,parsed});
+    setTimeout(()=>triggerDl(vcStr,fname),500);
+  }catch(err){
+    document.getElementById('vc-display').innerHTML=
+      `<div class="err-box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Errore lettura vCard: ${esc(err.message)}</span></div>`;
+  }
+}
+
+function showPreview(entry){
+  const d=entry.parsed,fname=entry.title||d.dn||`${d.fn} ${d.ln}`;
+  const ini=fname.split(/\s+/).map(w=>w[0]||'').slice(0,2).join('').toUpperCase()||'?';
+  const share=entry.shortUrl||entry.longUrl,sc=entry.shortCode||'';
+  const rows=[];
+  const row=(ic,lb,val)=>rows.push(`<div class="vc-row"><div class="vc-ico">${ic}</div><div class="vc-c"><div class="vc-lbl">${lb}</div><div class="vc-val">${val}</div></div></div>`);
+  const PI=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 11.27 19 19.44 19.44 0 0 1 5 12.72 19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`;
+  const EI=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>`;
+  const WI=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`;
+  const MI=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
+  const LI=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`;
+  const NI=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
+  if(d.p1) row(PI,'Telefono',`<a href="tel:${d.p1}">${esc(d.p1)}</a>`);
+  if(d.p2) row(PI,'Cellulare',`<a href="tel:${d.p2}">${esc(d.p2)}</a>`);
+  if(d.p3) row(PI,'Tel. 3',`<a href="tel:${d.p3}">${esc(d.p3)}</a>`);
+  if(d.fx) row(PI,'Fax',esc(d.fx));
+  if(d.e1) row(EI,'Email',`<a href="mailto:${d.e1}">${esc(d.e1)}</a>`);
+  if(d.e2) row(EI,'Email 2',`<a href="mailto:${d.e2}">${esc(d.e2)}</a>`);
+  if(d.wb) row(WI,'Sito web',`<a href="${esc(d.wb)}" target="_blank" rel="noopener">${esc(d.wb)}</a>`);
+  if(d.st||d.ci) row(MI,'Indirizzo',esc([d.st,d.ci,d.re,d.zp,d.co].filter(Boolean).join(', ')));
+  if(d.li) row(LI,'LinkedIn',`<a href="${esc(d.li)}" target="_blank" rel="noopener">Profilo LinkedIn ↗</a>`);
+  if(d.tw) row(LI,'X/Twitter',`<a href="${esc(d.tw)}" target="_blank" rel="noopener">Profilo X ↗</a>`);
+  if(d.ig) row(LI,'Instagram',`<a href="${esc(d.ig)}" target="_blank" rel="noopener">Profilo Instagram ↗</a>`);
+  if(d.gh) row(LI,'GitHub',`<a href="${esc(d.gh)}" target="_blank" rel="noopener">Profilo GitHub ↗</a>`);
+  if(d.no) row(NI,'Note',esc(d.no));
+  const b64=btoa(unescape(encodeURIComponent(entry.vcStr)));
+  const fns=fname.replace(/'/g,'').replace(/"/g,'');
+  document.getElementById('vc-display').innerHTML=`
+    <div style="display:flex;gap:var(--s3);margin-bottom:var(--s5);flex-wrap:wrap;align-items:center">
+      <button class="btn-sec" onclick="sw('saved')">← Elenco</button>
+      ${sc?`<button class="bs bs-qr" onclick="openQR('${esc(sc)}','${esc(share)}')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="3" height="3" rx=".5"/><rect x="18" y="14" width="3" height="3" rx=".5"/><rect x="14" y="18" width="3" height="3" rx=".5"/><rect x="18" y="18" width="3" height="3" rx=".5"/></svg>
+        QR Code</button>`:''}
+      ${share?`<button class="bs bs-ghost" onclick="copyUrl('${esc(share)}')">Copia link</button>`:''}
+    </div>
+    <div class="vc-card">
+      <div class="vc-hero">
+        <div class="vc-av">${ini}</div>
+        <h1>${esc(fname)}</h1>
+        ${d.tit?`<div class="role">${esc(d.tit)}</div>`:''}
+        ${d.org?`<div class="org">${esc(d.org)}</div>`:''}
+      </div>
+      <div class="vc-body">${rows.join('')}</div>
+      <div class="vc-foot">
+        <button class="vc-dl" onclick="dlB64('${b64}','${esc(fns)}')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Scarica contatto (.vcf)
+        </button>
+        ${share?`<div class="lchip" style="max-width:320px">
+          <a href="${esc(share)}" target="_blank" rel="noopener">${esc(share)}</a>
+          <button class="cbtn" onclick="copyUrl('${esc(share)}')" title="Copia">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button></div>`:''}
+        <span class="vc-pw">vCard · Shlink</span>
+      </div>
+    </div>`;
+}
+
+// ══════════════════════════════════
+// QR MODAL
+// ══════════════════════════════════
+function refreshQR(){
+  const canvas=document.getElementById('qr-canvas');
+  if(!canvas||!qrShortUrl) return;
+  const size  =parseInt(document.getElementById('qr-size').value)||300;
+  const color =document.getElementById('qr-color').value||'#000000';
+  const bg    =document.getElementById('qr-bg').value||'#ffffff';
+  const ec    =document.getElementById('qr-ec').value||'M';
+  const margin=parseInt(document.getElementById('qr-margin').value)||1;
+  document.getElementById('qr-color-val').textContent=color;
+  document.getElementById('qr-bg-val').textContent=bg;
+  document.getElementById('qr-url-hint').textContent=qrShortUrl;
+  QRCode.toCanvas(canvas, qrShortUrl, {
+    width:size, margin:margin, errorCorrectionLevel:ec,
+    color:{dark:color, light:bg}
+  }, err=>{ if(err) toast('Errore QR: '+err.message,'err'); });
+}
+
+function debounceQR(){
+  clearTimeout(qrTimer);
+  qrTimer=setTimeout(refreshQR,300);
+}
+
+function qrLoaded(){}
+function qrError(){}
+
+function downloadQR(){
+  const canvas=document.getElementById('qr-canvas');
+  if(!canvas){toast('QR non pronto','err');return;}
+  canvas.toBlob(blob=>{
+    if(!blob){toast('Errore generazione QR','err');return;}
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='qr-'+qrShortCode+'.png';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('QR scaricato!','ok');
+  },'image/png');
+}
+
+function copyQRUrl(){
+  copyUrl(qrShortUrl);
+}
+
+
+function closeQR(e){
+  if(e.target===document.getElementById('qr-overlay')) closeQRForce();
+}
+function closeQRForce(){
+  document.getElementById('qr-overlay').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+async function downloadQR(){
+  const url = buildQRUrl();
+  const fmt = document.getElementById('qr-fmt').value || 'png';
+
+  const r = await fetch(url);
+  const blob = await r.blob();
+
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `qr-${qrShortCode}.${fmt}`;
+  a.click();
+}
+
+function copyQRUrl(){
+  copyUrl(qrShortUrl);
+}
+
+// close on ESC
+document.addEventListener('keydown',e=>{if(e.key==='Escape') closeQRForce();});
+
+// ── DOWNLOAD VCARD ──
+function dlB64(b64,fn){
+  const vcStr=decodeURIComponent(escape(atob(b64)));
+  triggerDl(vcStr,fn);
+}
+function triggerDl(vcStr,fn){
+  const blob=new Blob([vcStr],{type:'text/vcard;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=(fn||'contact').replace(/[^a-z0-9\-_]/gi,'-').toLowerCase()+'.vcf';
+  a.click();URL.revokeObjectURL(a.href);
+}
+
+// ── PARSE VCARD ──
+function parseVC(str){
+  const g=f=>{const m=str.match(new RegExp('^'+f+'[^:]*:(.*)$','im'));return m?m[1].trim():'';};
+  const ga=f=>[...str.matchAll(new RegExp('^'+f+'[^:]*:(.*)$','gim'))].map(m=>m[1].trim());
+  const sc={};[...str.matchAll(/^X-SOCIALPROFILE;TYPE=([^:]+):(.*)$/gim)].forEach(m=>sc[m[1].toLowerCase()]=m[2].trim());
+  const n=g('N').split(';'),adr=g('ADR').split(';'),ph=ga('TEL'),em=ga('EMAIL');
+  return{fn:n[1]||'',ln:n[0]||'',dn:g('FN'),px:n[3]||'',sx:n[4]||'',nn:g('NICKNAME'),
+    org:g('ORG').split(';')[0],dep:g('ORG').split(';')[1]||'',tit:g('TITLE'),
+    p1:ph[0]||'',p2:ph[1]||'',p3:ph[2]||'',fx:ph[3]||'',
+    e1:em[0]||'',e2:em[1]||'',wb:g('URL'),
+    st:adr[2]||'',ci:adr[3]||'',re:adr[4]||'',zp:adr[5]||'',co:adr[6]||'',
+    li:sc.linkedin||'',tw:sc.twitter||'',ig:sc.instagram||'',gh:sc.github||'',no:g('NOTE')};
+}
+
+// ── UTILS ──
+async function copyUrl(url){
+  try{await navigator.clipboard.writeText(url);toast('Link copiato!','ok');}
+  catch(_){toast('Impossibile copiare','err');}
+}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function toast(msg,type=''){
+  const c=document.getElementById('toasts');
+  const t=document.createElement('div');
+  t.className='toast'+(type?' '+type:'');
+  const ic=type==='ok'?'<polyline points="20 6 9 17 4 12"/>':type==='err'?'<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>':'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>';
+  t.innerHTML=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">${ic}</svg>${esc(msg)}`;
+  c.appendChild(t);setTimeout(()=>t.remove(),3500);
+}
+</script>
+</body>
+</html>

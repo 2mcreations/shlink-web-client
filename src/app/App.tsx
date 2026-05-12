@@ -9,6 +9,7 @@ import { MainHeader } from '../common/MainHeader';
 import { NotFound } from '../common/NotFound';
 import { ShlinkVersionsContainer } from '../common/ShlinkVersionsContainer';
 import { ShlinkWebComponentContainer } from '../common/ShlinkWebComponentContainer';
+import { VCardBuilder } from '../common/VCardBuilder';
 import { CreateServer } from '../servers/CreateServer';
 import { EditServer } from '../servers/EditServer';
 import { ManageServers } from '../servers/ManageServers';
@@ -50,6 +51,7 @@ export const App: FC = () => {
                 {['', '*'].map((path) => <Route key={path} path={path} element={<Settings />} />)}
               </Route>
               <Route path="/manage-servers" element={<ManageServers />} />
+              <Route path="/vcard-builder" element={<VCardBuilder />} />
               <Route path="/server/create" element={<CreateServer />} />
               <Route path="/server/:serverId/edit" element={<EditServer />} />
               <Route path="/server/:serverId">

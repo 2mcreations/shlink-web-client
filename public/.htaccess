@@ -1,3 +1,21 @@
+# ────────────────────────────────────────────────────────────
+#  ROTTE PUBBLICHE — escluse dall'autenticazione:
+#
+#  1. Qualsiasi short-code Shlink  →  /{shortCode}[/...]
+#     (redirect gestito da Shlink, Apache fa solo pass-through)
+#
+#  2. La pagina vCard pubblica con parametro ?vc=...
+#     Accessibile su: /vc/  (cartella separata)
+# ────────────────────────────────────────────────────────────
+
+# Abilita mod_rewrite
+Options -Indexes
+
+# Cartella pubblica /vc/ — nessuna autenticazione
+<If "%{REQUEST_URI} =~ m#^/vc/#">
+    Satisfy Any
+</If>
+
 RewriteEngine on
 RewriteBase /
 

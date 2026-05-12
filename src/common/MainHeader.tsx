@@ -6,7 +6,7 @@ import { Link, useLocation } from 'react-router';
 import { ServersDropdown } from '../servers/ServersDropdown';
 import { ShlinkLogo } from './img/ShlinkLogo';
 
-const SMARTVCARD_PATH = 'https://vcard.obiettivoqr.it';
+const VCARD_BUILDER_PATH = '/vcard-builder';
 
 export const MainHeader: FC = () => {
   const { pathname } = useLocation();
@@ -30,12 +30,11 @@ export const MainHeader: FC = () => {
         <FontAwesomeIcon icon={cogsIcon} /> Settings
       </NavBar.MenuItem>
       <NavBar.MenuItem
-        to={SMARTVCARD_PATH}
-        active={false}
+        to={VCARD_BUILDER_PATH}
+        active={pathname.startsWith(VCARD_BUILDER_PATH)}
         className="flex items-center gap-1.5"
-        reloadDocument
       >
-        <FontAwesomeIcon icon={vcardIcon} /> SmartVCard
+        <FontAwesomeIcon icon={vcardIcon} /> vCard
       </NavBar.MenuItem>
       <ServersDropdown />
     </NavBar>
