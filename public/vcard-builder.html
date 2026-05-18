@@ -252,12 +252,20 @@ main{padding:var(--s8) var(--s6);max-width:1100px;margin:0 auto;width:100%}
 @media(max-width:400px){.qr-controls{grid-template-columns:1fr}}
 .qr-fg{display:flex;flex-direction:column;gap:var(--s2)}
 .qr-fg label{font-size:var(--xs);font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.qr-fg select{color: var(--txt);background: var(--surface);}
+.qr-fg select option{color: var(--txt);background: var(--surface);}
+.qr-color-row span{color: var(--txt);}
 .qr-fg input[type=number],.qr-fg select{
   padding:var(--s2) var(--s3);border:1px solid oklch(from var(--txt) l c h/.14);
   border-radius:var(--rm);background:var(--surface);font-size:var(--sm);
   transition:border-color var(--t),box-shadow var(--t)}
 .qr-fg input[type=number]:focus,.qr-fg select:focus{
   border-color:var(--pri);box-shadow:0 0 0 3px oklch(from var(--pri) l c h/.14);outline:none}
+[data-theme="dark"] .qr-fg select,
+[data-theme="dark"] .qr-fg select option,
+[data-theme="dark"] .fg select,
+[data-theme="dark"] .fg select option {
+  background: var(--surface2);color: var(--txt);}
 .qr-color-row{display:flex;align-items:center;gap:var(--s3)}
 .qr-color-row input[type=color]{
   width:36px;height:36px;padding:2px;border:1px solid oklch(from var(--txt) l c h/.14);
@@ -265,6 +273,29 @@ main{padding:var(--s8) var(--s6);max-width:1100px;margin:0 auto;width:100%}
 .qr-color-row span{font-size:var(--xs);color:var(--muted)}
 .qr-full{grid-column:1/-1}
 .qr-actions{display:flex;gap:var(--s3);flex-wrap:wrap}
+
+/* ── EDIT MODAL ── */
+.edit-modal-overlay{
+  position:fixed;inset:0;z-index:600;
+  background:oklch(0 0 0/.55);
+  display:flex;align-items:flex-start;justify-content:center;
+  padding:var(--s4);overflow-y:auto;
+  opacity:0;pointer-events:none;transition:opacity .2s ease;
+}
+.edit-modal-overlay.open{opacity:1;pointer-events:all}
+.edit-modal{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--rxl);box-shadow:var(--sh2);
+  width:100%;max-width:720px;overflow:hidden;margin:auto;
+  transform:translateY(16px) scale(.97);transition:transform .2s ease;
+}
+.edit-modal-overlay.open .edit-modal{transform:none}
+.edit-modal-head{display:flex;align-items:center;justify-content:space-between;
+  padding:var(--s5) var(--s6);border-bottom:1px solid var(--div)}
+.edit-modal-head h3{font-family:var(--fd);font-size:var(--lg);font-weight:400}
+.edit-modal-body{padding:var(--s6);max-height:80vh;overflow-y:auto}
+.edit-modal-foot{display:flex;align-items:center;gap:var(--s4);
+  padding:var(--s5) var(--s6);border-top:1px solid var(--div);flex-wrap:wrap}
 
 /* ── TOAST ── */
 .toasts{position:fixed;bottom:var(--s6);right:var(--s6);z-index:9999;
@@ -283,7 +314,7 @@ main{padding:var(--s8) var(--s6);max-width:1100px;margin:0 auto;width:100%}
   .slug-pfx{display:none}
 }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.2.2/build/qrcode.min.js"></script>
 </head>
 <body>
 <div class="app">
@@ -334,7 +365,7 @@ main{padding:var(--s8) var(--s6);max-width:1100px;margin:0 auto;width:100%}
       <div class="ftit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>Identità</div>
       <div class="grid2">
         <div class="fg"><label>Nome <span class="req">*</span></label><input id="fn" placeholder="Mario" required></div>
-        <div class="fg"><label>Cognome <span class="req">*</span></label><input id="ln" placeholder="Rossi" required></div>
+        <div class="fg"><label>Cognome</label><input id="ln" placeholder="Rossi"></div>
         <div class="fg"><label>Nome visualizzato</label><input id="dn" placeholder="Auto-compilato se vuoto"></div>
         <div class="fg"><label>Prefisso</label><input id="px" placeholder="Dott., Ing."></div>
         <div class="fg"><label>Suffisso</label><input id="sx" placeholder="PhD, Jr."></div>
@@ -379,9 +410,12 @@ main{padding:var(--s8) var(--s6);max-width:1100px;margin:0 auto;width:100%}
       <div class="ftit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Social & Altro</div>
       <div class="grid2">
         <div class="fg"><label>LinkedIn</label><input type="url" id="li" placeholder="https://linkedin.com/in/…"></div>
-        <div class="fg"><label>Twitter / X</label><input type="url" id="tw" placeholder="https://x.com/…"></div>
+        <div class="fg"><label>X</label><input type="url" id="x" placeholder="https://x.com/…"></div>
         <div class="fg"><label>Instagram</label><input type="url" id="ig" placeholder="https://instagram.com/…"></div>
+        <div class="fg"><label>Facebook</label><input type="url" id="fb" placeholder="https://facebook.com/…"></div>
         <div class="fg"><label>GitHub</label><input type="url" id="gh" placeholder="https://github.com/…"></div>
+        <div class="fg"><label>TikTok</label><input type="url" id="tk" placeholder="https://tiktok.com/@…"></div>
+        <div class="fg"><label>Altro Social</label><input type="url" id="wbs" placeholder="https://altrosocial.com/…"></div>
         <div class="fg full"><label>Note</label><textarea id="no" placeholder="Breve bio, note aggiuntive…"></textarea></div>
       </div>
     </div>
@@ -429,6 +463,88 @@ main{padding:var(--s8) var(--s6);max-width:1100px;margin:0 auto;width:100%}
 </div>
 
 </main>
+<div class="edit-modal-overlay" id="edit-overlay" onclick="closeEditOnBg(event)">
+  <div class="edit-modal" role="dialog" aria-modal="true" aria-labelledby="edit-title">
+    <div class="edit-modal-head">
+      <h3 id="edit-title">Modifica vCard</h3>
+      <button class="btn-icon" onclick="closeEdit()" aria-label="Chiudi">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="edit-modal-body">
+      <div id="edit-msg"></div>
+      <form id="edit-vcf" onsubmit="saveEdit(event)">
+        <div class="fsec">
+          <div class="ftit">Identità</div>
+          <div class="grid2">
+            <div class="fg"><label>Nome <span class="req">*</span></label><input id="e-fn" required></div>
+            <div class="fg"><label>Cognome</label><input id="e-ln"></div>
+            <div class="fg"><label>Nome visualizzato</label><input id="e-dn"></div>
+            <div class="fg"><label>Prefisso</label><input id="e-px"></div>
+            <div class="fg"><label>Suffisso</label><input id="e-sx"></div>
+            <div class="fg"><label>Nickname</label><input id="e-nn"></div>
+          </div>
+        </div>
+        <div class="fsec">
+          <div class="ftit">Lavoro</div>
+          <div class="grid2">
+            <div class="fg"><label>Azienda</label><input id="e-org"></div>
+            <div class="fg"><label>Dipartimento</label><input id="e-dep"></div>
+            <div class="fg full"><label>Ruolo / Titolo</label><input id="e-tit"></div>
+          </div>
+        </div>
+        <div class="fsec">
+          <div class="ftit">Contatti</div>
+          <div class="grid2">
+            <div class="fg"><label>Telefono WORK</label><input type="tel" id="e-p1"></div>
+            <div class="fg"><label>Cellulare CELL</label><input type="tel" id="e-p2"></div>
+            <div class="fg"><label>Telefono HOME</label><input type="tel" id="e-p3"></div>
+            <div class="fg"><label>Fax</label><input type="tel" id="e-fx"></div>
+            <div class="fg"><label>Email WORK</label><input type="email" id="e-e1"></div>
+            <div class="fg"><label>Email secondaria</label><input type="email" id="e-e2"></div>
+            <div class="fg full"><label>Sito web</label><input type="url" id="e-wb"></div>
+          </div>
+        </div>
+        <div class="fsec">
+          <div class="ftit">Indirizzo</div>
+          <div class="grid2">
+            <div class="fg full"><label>Via</label><input id="e-st"></div>
+            <div class="fg"><label>Città</label><input id="e-ci"></div>
+            <div class="fg"><label>Provincia</label><input id="e-re"></div>
+            <div class="fg"><label>CAP</label><input id="e-zp"></div>
+            <div class="fg"><label>Paese</label><input id="e-co"></div>
+          </div>
+        </div>
+        <div class="fsec">
+          <div class="ftit">Social & Altro</div>
+          <div class="grid2">
+            <div class="fg"><label>LinkedIn</label><input type="url" id="e-li"></div>
+            <div class="fg"><label>X</label><input type="url" id="e-x"></div>
+            <div class="fg"><label>Instagram</label><input type="url" id="e-ig"></div>
+            <div class="fg"><label>Facebook</label><input type="url" id="e-fb"></div>
+            <div class="fg"><label>GitHub</label><input type="url" id="e-gh"></div>
+            <div class="fg"><label>TikTok</label><input type="url" id="e-tk"></div>
+            <div class="fg"><label>Altro Social</label><input type="url" id="e-wbs"></div>
+            <div class="fg full"><label>Note</label><textarea id="e-no"></textarea></div>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="edit-modal-foot">
+      <button type="submit" form="edit-vcf" class="btn-pri" id="edit-sbtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/>
+          <polyline points="7 3 7 8 15 8"/>
+        </svg>
+        Salva modifiche
+      </button>
+      <button type="button" class="btn-sec" onclick="closeEdit()">Annulla</button>
+    </div>
+  </div>
+</div>
 </div><!-- .app -->
 
 <!-- ╔═══════════════════════════
@@ -457,17 +573,17 @@ main{padding:var(--s8) var(--s6);max-width:1100px;margin:0 auto;width:100%}
         <div class="qr-fg">
           <label>Formato</label>
           <select id="qr-fmt" onchange="refreshQR()">
-            <option value="png" selected>PNG</option>
-            <option value="svg">SVG</option>
+            <option value="png">PNG</option>
+            <option value="svg"selected>SVG</option>
           </select>
         </div>
         <div class="qr-fg">
           <label>Error correction</label>
           <select id="qr-ec" onchange="refreshQR()">
             <option value="L">L — bassa (7%)</option>
-            <option value="M" selected>M — media (15%)</option>
+            <option value="M">M — media (15%)</option>
             <option value="Q">Q — alta (25%)</option>
-            <option value="H">H — massima (30%)</option>
+            <option value="H"selected>H — massima (30%)</option>
           </select>
         </div>
         <div class="qr-fg">
@@ -607,9 +723,12 @@ function buildVC(d){
   if(d.wb)  L.push(`URL:${d.wb}`);
   if(d.st||d.ci) L.push(`ADR;TYPE=WORK:;;${d.st};${d.ci};${d.re};${d.zp};${d.co}`);
   if(d.li)  L.push(`X-SOCIALPROFILE;TYPE=linkedin:${d.li}`);
-  if(d.tw)  L.push(`X-SOCIALPROFILE;TYPE=twitter:${d.tw}`);
+  if(d.x)   L.push(`X-SOCIALPROFILE;TYPE=x:${d.x}`);
   if(d.ig)  L.push(`X-SOCIALPROFILE;TYPE=instagram:${d.ig}`);
+  if(d.fb)  L.push(`X-SOCIALPROFILE;TYPE=facebook:${d.fb}`);
   if(d.gh)  L.push(`X-SOCIALPROFILE;TYPE=github:${d.gh}`);
+  if(d.tk)  L.push(`X-SOCIALPROFILE;TYPE=tiktok:${d.tk}`);
+  if(d.wbs) L.push(`X-SOCIALPROFILE;TYPE=social:${d.wbs}`);
   if(d.no)  L.push(`NOTE:${d.no}`);
   L.push(`REV:${new Date().toISOString()}`,'END:VCARD');
   return L.join('\r\n');
@@ -648,7 +767,7 @@ async function saveVC(e){
   e.preventDefault();
   if(!CFG){toast('Configurazione Shlink non disponibile','err');return;}
   const d=collect();
-  if(!d.fn||!d.ln){toast('Nome e Cognome obbligatori','err');return;}
+  if(!d.fn){toast('Nome obbligatorio','err');return;}
   const btn=document.getElementById('sbtn');
   btn.disabled=true;
   btn.innerHTML=`<div class="spin" style="width:16px;height:16px;border-width:2px;margin:0"></div> Salvataggio…`;
@@ -659,7 +778,7 @@ async function saveVC(e){
     const longUrl=`${PAGE_URL}?vc=${encodeURIComponent(enc)}`;
     const slug=gv('slug')||undefined;
     const tags=['vcard'];
-    if(d.org) tags.push('org:'+d.org.toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,30));
+    if(d.org) tags.push(d.org.toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,30));
     const res=await aPost('/short-urls',{longUrl,...(slug?{customSlug:slug}:{}),findIfExists:false,tags,title:fname});
     toast(`"${fname}" salvata!`,'ok');
     try{await navigator.clipboard.writeText(res.shortUrl);toast('Link copiato!');}catch(_){}
@@ -704,7 +823,7 @@ function renderSaved(items){
     const long=item.longUrl||'';
     const sc=item.shortCode||'';
     const ini=fname.split(' ').map(w=>w[0]||'').slice(0,2).join('').toUpperCase()||'?';
-    const sub=tags.filter(t=>t.startsWith('org:')).map(t=>t.slice(4)).join(' · ');
+    const sub=tags.filter(t=>t !== 'vcard').join(' · ');
     const vis=item.visitsSummary?.total??item.visitsCount??0;
     // Salvo l'item nello store indicizzato — nessun dato inline nell'onclick
     vcStore.set(idx, {long, short, sc, fname, tags});
@@ -740,9 +859,12 @@ function renderSaved(items){
           </svg>
           QR Code
         </button>
-        <button class="bs bs-ghost" onclick="copyUrl('${esc(short)}')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          Copia
+        <button class="bs bs-ghost" onclick="openEdit(${idx})">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          Modifica
         </button>
         <button class="bs bs-del" onclick="delEntry('${esc(sc)}','${esc(fname)}')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
@@ -862,21 +984,48 @@ function showPreview(entry){
 // ══════════════════════════════════
 // QR MODAL
 // ══════════════════════════════════
+function openQR(sc, shortUrl){
+  qrShortCode = sc;
+  qrShortUrl = shortUrl;
+
+  document.getElementById('qr-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  if(typeof QRCode === 'undefined' || !QRCode.toCanvas){
+    toast('Libreria QR non caricata', 'err');
+    return;
+  }
+
+  refreshQR();
+}
+
 function refreshQR(){
-  const canvas=document.getElementById('qr-canvas');
-  if(!canvas||!qrShortUrl) return;
-  const size  =parseInt(document.getElementById('qr-size').value)||300;
-  const color =document.getElementById('qr-color').value||'#000000';
-  const bg    =document.getElementById('qr-bg').value||'#ffffff';
-  const ec    =document.getElementById('qr-ec').value||'M';
-  const margin=parseInt(document.getElementById('qr-margin').value)||1;
-  document.getElementById('qr-color-val').textContent=color;
-  document.getElementById('qr-bg-val').textContent=bg;
-  document.getElementById('qr-url-hint').textContent=qrShortUrl;
+  const canvas = document.getElementById('qr-canvas');
+  if(!canvas || !qrShortUrl) return;
+
+  if(typeof QRCode === 'undefined' || !QRCode.toCanvas){
+    toast('Libreria QR non caricata', 'err');
+    return;
+  }
+
+  const size   = parseInt(document.getElementById('qr-size').value) || 300;
+  const color  = document.getElementById('qr-color').value || '#000000';
+  const bg     = document.getElementById('qr-bg').value || '#ffffff';
+  const ec     = document.getElementById('qr-ec').value || 'M';
+  const margin = parseInt(document.getElementById('qr-margin').value) || 1;
+
+  document.getElementById('qr-color-val').textContent = color;
+  document.getElementById('qr-bg-val').textContent = bg;
+  document.getElementById('qr-url-hint').textContent = qrShortUrl;
+
   QRCode.toCanvas(canvas, qrShortUrl, {
-    width:size, margin:margin, errorCorrectionLevel:ec,
-    color:{dark:color, light:bg}
-  }, err=>{ if(err) toast('Errore QR: '+err.message,'err'); });
+    width: size,
+    margin: margin,
+    errorCorrectionLevel: ec,
+    color: { dark: color, light: bg }
+  }, err => {
+    if(err) toast('Errore QR: ' + err.message, 'err');
+  });
 }
 
 function debounceQR(){
@@ -913,26 +1062,6 @@ function closeQRForce(){
   document.getElementById('qr-overlay').classList.remove('open');
   document.body.style.overflow='';
 }
-
-async function downloadQR(){
-  const url = buildQRUrl();
-  const fmt = document.getElementById('qr-fmt').value || 'png';
-
-  const r = await fetch(url);
-  const blob = await r.blob();
-
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `qr-${qrShortCode}.${fmt}`;
-  a.click();
-}
-
-function copyQRUrl(){
-  copyUrl(qrShortUrl);
-}
-
-// close on ESC
-document.addEventListener('keydown',e=>{if(e.key==='Escape') closeQRForce();});
 
 // ── DOWNLOAD VCARD ──
 function dlB64(b64,fn){
@@ -974,6 +1103,98 @@ function toast(msg,type=''){
   const ic=type==='ok'?'<polyline points="20 6 9 17 4 12"/>':type==='err'?'<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>':'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>';
   t.innerHTML=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">${ic}</svg>${esc(msg)}`;
   c.appendChild(t);setTimeout(()=>t.remove(),3500);
+}
+
+// ── EDIT MODAL ──
+let editIdx = null;
+
+function openEdit(idx){
+  const entry = vcStore.get(idx);
+  if(!entry){ toast('Errore: item non trovato','err'); return; }
+  editIdx = idx;
+  try{
+    const vc = new URL(entry.long).searchParams.get('vc');
+    if(!vc) throw new Error('parametro vc mancante');
+    const vcStr = decodeURIComponent(escape(atob(vc)));
+    const d = parseVC(vcStr);
+    const sv = (id,val) => { const el=document.getElementById(id); if(el) el.value=val||''; };
+    sv('e-fn',d.fn); sv('e-ln',d.ln); sv('e-dn',d.dn); sv('e-px',d.px);
+    sv('e-sx',d.sx); sv('e-nn',d.nn); sv('e-org',d.org); sv('e-dep',d.dep);
+    sv('e-tit',d.tit); sv('e-p1',d.p1); sv('e-p2',d.p2); sv('e-p3',d.p3);
+    sv('e-fx',d.fx); sv('e-e1',d.e1); sv('e-e2',d.e2); sv('e-wb',d.wb);
+    sv('e-st',d.st); sv('e-ci',d.ci); sv('e-re',d.re); sv('e-zp',d.zp); sv('e-co',d.co);
+    sv('e-li',d.li); sv('e-x',d.tw||''); sv('e-ig',d.ig); sv('e-fb',d.fb||'');
+    sv('e-gh',d.gh); sv('e-tk',d.tk||''); sv('e-wbs',d.wbs||''); sv('e-no',d.no);
+    document.getElementById('edit-title').textContent = 'Modifica: '+(entry.fname||'vCard');
+    document.getElementById('edit-msg').innerHTML = '';
+    document.getElementById('edit-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }catch(err){ toast('Errore decodifica: '+err.message,'err'); }
+}
+
+function closeEdit(){
+  document.getElementById('edit-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  editIdx = null;
+}
+
+function closeEditOnBg(e){
+  if(e.target === document.getElementById('edit-overlay')) closeEdit();
+}
+
+// ESC chiude anche l'edit (aggiunto al listener esistente)
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeQRForce(); closeEdit(); }});
+
+function collectEdit(){
+  const gve = id => document.getElementById(id)?.value.trim()||'';
+  return{fn:gve('e-fn'),ln:gve('e-ln'),dn:gve('e-dn'),px:gve('e-px'),sx:gve('e-sx'),nn:gve('e-nn'),
+    org:gve('e-org'),dep:gve('e-dep'),tit:gve('e-tit'),
+    p1:gve('e-p1'),p2:gve('e-p2'),p3:gve('e-p3'),fx:gve('e-fx'),
+    e1:gve('e-e1'),e2:gve('e-e2'),wb:gve('e-wb'),
+    st:gve('e-st'),ci:gve('e-ci'),re:gve('e-re'),zp:gve('e-zp'),co:gve('e-co'),
+    li:gve('e-li'),tw:gve('e-x'),ig:gve('e-ig'),fb:gve('e-fb'),gh:gve('e-gh'),
+    tk:gve('e-tk'),wbs:gve('e-wbs'),no:gve('e-no')};
+}
+
+async function saveEdit(e){
+  e.preventDefault();
+  if(!CFG){ toast('Configurazione Shlink non disponibile','err'); return; }
+  if(editIdx===null){ toast('Errore interno','err'); return; }
+  const entry = vcStore.get(editIdx);
+  if(!entry){ toast('Errore: item non trovato','err'); return; }
+  const d = collectEdit();
+  if(!d.fn){ toast('Nome obbligatorio','err'); return; }
+
+  const btn = document.getElementById('edit-sbtn');
+  btn.disabled = true;
+  btn.innerHTML = `<div class="spin" style="width:16px;height:16px;border-width:2px;margin:0"></div> Salvataggio…`;
+
+  try{
+    const vcStr = buildVC(d);
+    const enc = btoa(unescape(encodeURIComponent(vcStr)));
+    const fname = d.dn||`${d.fn} ${d.ln}`;
+    const newLongUrl = `${PAGE_URL}?vc=${encodeURIComponent(enc)}`;
+
+    // Aggiorna via PATCH Shlink v3
+    const r = await fetch(`${CFG.url}/rest/v3/short-urls/${entry.sc}`, {
+      method:'PATCH',
+      headers: aHdr(),
+      body: JSON.stringify({ longUrl: newLongUrl, title: fname })
+    });
+    const j = await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(j.detail||j.title||'Errore '+r.status);
+
+    toast(`"${fname}" aggiornata!`, 'ok');
+    closeEdit();
+    loadSaved();
+  }catch(err){
+    document.getElementById('edit-msg').innerHTML =
+      `<div class="err-box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>${esc(err.message)}</span></div>`;
+    toast('Errore: '+err.message,'err');
+  }finally{
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Salva modifiche`;
+  }
 }
 </script>
 </body>
