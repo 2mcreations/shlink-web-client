@@ -1011,7 +1011,7 @@ function refreshQR(){
   const size   = parseInt(document.getElementById('qr-size').value) || 300;
   const color  = document.getElementById('qr-color').value || '#000000';
   const bg     = document.getElementById('qr-bg').value || '#ffffff';
-  const ec     = document.getElementById('qr-ec').value || 'M';
+  const ec     = document.getElementById('qr-ec').value || 'H';
   const margin = parseInt(document.getElementById('qr-margin').value) || 1;
 
   document.getElementById('qr-color-val').textContent = color;
@@ -1036,18 +1036,48 @@ function debounceQR(){
 function qrLoaded(){}
 function qrError(){}
 
-function downloadQR(){
-  const canvas=document.getElementById('qr-canvas');
-  if(!canvas){toast('QR non pronto','err');return;}
-  canvas.toBlob(blob=>{
-    if(!blob){toast('Errore generazione QR','err');return;}
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download='qr-'+qrShortCode+'.png';
-    a.click();
-    URL.revokeObjectURL(a.href);
-    toast('QR scaricato!','ok');
-  },'image/png');
+function downloadQR() {
+  const fmt = document.getElementById('qr-fmt').value || 'png';
+
+  if (fmt === 'svg') {
+    // Genera SVG via QRCode.toString()
+    const size   = parseInt(document.getElementById('qr-size').value) || 300;
+    const color  = document.getElementById('qr-color').value || '#000000';
+    const bg     = document.getElementById('qr-bg').value || '#ffffff';
+    const ec     = document.getElementById('qr-ec').value || 'H';
+    const margin = parseInt(document.getElementById('qr-margin').value) || 1;
+
+    QRCode.toString(qrShortUrl, {
+      type: 'svg',
+      width: size,
+      margin: margin,
+      errorCorrectionLevel: ec,
+      color: { dark: color, light: bg }
+    }, (err, svgString) => {
+      if (err) { toast('Errore generazione SVG: ' + err.message, 'err'); return; }
+      const blob = new Blob([svgString], { type: 'image/svg+xml' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'qr-' + qrShortCode + '.svg';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast('QR SVG scaricato!', 'ok');
+    });
+
+  } else {
+    // PNG dal canvas esistente
+    const canvas = document.getElementById('qr-canvas');
+    if (!canvas) { toast('QR non pronto', 'err'); return; }
+    canvas.toBlob(blob => {
+      if (!blob) { toast('Errore generazione PNG', 'err'); return; }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'qr-' + qrShortCode + '.png';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast('QR PNG scaricato!', 'ok');
+    }, 'image/png');
+  }
 }
 
 function copyQRUrl(){
