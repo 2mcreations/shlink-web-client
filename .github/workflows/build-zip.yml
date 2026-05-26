@@ -29,7 +29,9 @@ jobs:
 
       - name: Create Zip Archive
         run: |
-          cd build && zip -r ../public.zip . && cd ..
+          rm -r public
+          mv build public
+          zip -r public.zip public
 
       - name: Upload Artifact (disponibile in PR e Main)
         uses: actions/upload-artifact@v4
