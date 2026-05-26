@@ -1,8 +1,10 @@
 import type { FC } from 'react';
 
+const VCARD_VERSION = '2.1.0';
+
 export const VCardBuilder: FC = () => (
   <iframe
-    src="/vcard-builder.html?embedded=1"
+    src={`/vcard-builder.html?v=${VCARD_VERSION}&embedded=1`}
     title="vCard"
     style={{
       width: '100%',

@@ -306,12 +306,49 @@ main{padding:var(--s8) var(--s6);max-width:1100px;margin:0 auto;width:100%}
 .toast.ok{background:#437a22}.toast.err{background:#a12c7b}
 @keyframes ti{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
 
+/* ── RESPONSIVE ── */
 @media(max-width:768px){
-  main{padding:var(--s4)}
-  .vi{grid-template-columns:auto 1fr;grid-template-rows:auto auto}
-  .vi-acts{grid-column:1/-1;flex-direction:row;flex-wrap:wrap}
+  main{padding:var(--s4) var(--s3)}
+  .sec-hdr{margin-bottom:var(--s5)}
+  .sec-hdr h2{font-size:var(--lg)}
+  .fsec{padding:var(--s4);margin-bottom:var(--s4)}
+  .grid2{grid-template-columns:1fr}
+  .form-acts{flex-direction:column;align-items:stretch}
+  .form-acts .btn-pri,.form-acts .btn-sec{justify-content:center}
+
+  /* saved list card */
+  .vi{grid-template-columns:auto 1fr;grid-template-rows:auto auto;gap:var(--s3);padding:var(--s4)}
+  .vi-acts{grid-column:1/-1;flex-direction:row;flex-wrap:wrap;gap:var(--s2)}
+  .vi-acts .bs{flex:1;justify-content:center;min-width:calc(50% - var(--s1))}
+
+  /* header */
   header{padding:var(--s3) var(--s4)}
+  .logo-text{display:none}
   .slug-pfx{display:none}
+  .badge{max-width:120px;overflow:hidden}
+  .badge #srv-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  /* vcard preview */
+  #view-vc .vc-card{margin:0}
+  .vc-hero{padding:var(--s8) var(--s5) var(--s4)}
+  .vc-body{padding:var(--s4)}
+  .vc-foot{padding:var(--s4)}
+
+  /* modals */
+  .edit-modal-body{max-height:70vh}
+  .modal-body{padding:var(--s4)}
+  .qr-controls{grid-template-columns:1fr 1fr}
+  .edit-modal-foot{flex-direction:column}
+  .edit-modal-foot .btn-pri,
+  .edit-modal-foot .btn-sec{justify-content:center}
+}
+
+@media(max-width:480px){
+  .vi-acts .bs{min-width:100%}
+  .qr-controls{grid-template-columns:1fr}
+  .qr-actions{flex-direction:column}
+  .qr-actions .btn-pri,
+  .qr-actions .btn-sec{justify-content:center}
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.2.2/build/qrcode.min.js"></script>
@@ -413,10 +450,15 @@ main{padding:var(--s8) var(--s6);max-width:1100px;margin:0 auto;width:100%}
         <div class="fg"><label>X</label><input type="url" id="x" placeholder="https://x.com/…"></div>
         <div class="fg"><label>Instagram</label><input type="url" id="ig" placeholder="https://instagram.com/…"></div>
         <div class="fg"><label>Facebook</label><input type="url" id="fb" placeholder="https://facebook.com/…"></div>
-        <div class="fg"><label>GitHub</label><input type="url" id="gh" placeholder="https://github.com/…"></div>
+        <div class="fg"><label>Maps</label><input type="url" id="mp" placeholder="https://maps.app.goo.gl/…"></div>
         <div class="fg"><label>TikTok</label><input type="url" id="tk" placeholder="https://tiktok.com/@…"></div>
         <div class="fg"><label>Altro Social</label><input type="url" id="wbs" placeholder="https://altrosocial.com/…"></div>
-        <div class="fg full"><label>Note</label><textarea id="no" placeholder="Breve bio, note aggiuntive…"></textarea></div>
+        <div class="fg full">
+          <label>Note <span id="no-count" style="font-weight:400;color:var(--muted)"></span></label>
+          <textarea id="no" placeholder="Breve bio, note aggiuntive…" rows="3" maxlength="4000"
+            oninput="document.getElementById('no-count').textContent='('+this.value.length+'/4000)'"></textarea>
+          <span class="hint">Premi Invio per andare a capo. Max 4000 caratteri.</span>
+        </div>
       </div>
     </div>
 
@@ -524,10 +566,15 @@ main{padding:var(--s8) var(--s6);max-width:1100px;margin:0 auto;width:100%}
             <div class="fg"><label>X</label><input type="url" id="e-x"></div>
             <div class="fg"><label>Instagram</label><input type="url" id="e-ig"></div>
             <div class="fg"><label>Facebook</label><input type="url" id="e-fb"></div>
-            <div class="fg"><label>GitHub</label><input type="url" id="e-gh"></div>
+            <div class="fg"><label>Maps</label><input type="url" id="e-mp"></div>
             <div class="fg"><label>TikTok</label><input type="url" id="e-tk"></div>
             <div class="fg"><label>Altro Social</label><input type="url" id="e-wbs"></div>
-            <div class="fg full"><label>Note</label><textarea id="e-no"></textarea></div>
+            <div class="fg full">
+              <label>Note <span id="e-no-count" style="font-weight:400;color:var(--muted)"></span></label>
+              <textarea id="e-no" placeholder="Breve bio, note aggiuntive…" rows="3" maxlength="4000"
+                oninput="document.getElementById('e-no-count').textContent='('+this.value.length+'/4000)'"></textarea>
+              <span class="hint">Premi Invio per andare a capo. Max 4000 caratteri.</span>
+            </div>
           </div>
         </div>
       </form>
@@ -629,7 +676,7 @@ main{padding:var(--s8) var(--s6);max-width:1100px;margin:0 auto;width:100%}
 <script>
 'use strict';
 
-// ── THEME ──
+// â”€â”€ THEME â”€â”€
 (()=>{
   const btn=document.querySelector('[data-theme-toggle]'),r=document.documentElement;
   let d=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';
@@ -700,7 +747,7 @@ function collect(){
     p1:gv('p1'),p2:gv('p2'),p3:gv('p3'),fx:gv('fx'),
     e1:gv('e1'),e2:gv('e2'),wb:gv('wb'),
     st:gv('st'),ci:gv('ci'),re:gv('re'),zp:gv('zp'),co:gv('co'),
-    li:gv('li'),tw:gv('tw'),ig:gv('ig'),gh:gv('gh'),no:gv('no')};
+    li:gv('li'),x:gv('x'),ig:gv('ig'),fb:gv('fb'),mp:gv('mp'),tk:gv('tk'),wbs:gv('wbs'),no:gv('no')};
 }
 
 // ── BUILD VCARD ──
@@ -726,10 +773,10 @@ function buildVC(d){
   if(d.x)   L.push(`X-SOCIALPROFILE;TYPE=x:${d.x}`);
   if(d.ig)  L.push(`X-SOCIALPROFILE;TYPE=instagram:${d.ig}`);
   if(d.fb)  L.push(`X-SOCIALPROFILE;TYPE=facebook:${d.fb}`);
-  if(d.gh)  L.push(`X-SOCIALPROFILE;TYPE=github:${d.gh}`);
+  if(d.mp)  L.push(`X-SOCIALPROFILE;TYPE=maps:${d.mp}`);
   if(d.tk)  L.push(`X-SOCIALPROFILE;TYPE=tiktok:${d.tk}`);
   if(d.wbs) L.push(`X-SOCIALPROFILE;TYPE=social:${d.wbs}`);
-  if(d.no)  L.push(`NOTE:${d.no}`);
+  if(d.no)  L.push('NOTE:' + d.no.replace(/\r\n/g,'\n').replace(/\n/g,'\\n'));
   L.push(`REV:${new Date().toISOString()}`,'END:VCARD');
   return L.join('\r\n');
 }
@@ -944,10 +991,10 @@ function showPreview(entry){
   if(d.wb) row(WI,'Sito web',`<a href="${esc(d.wb)}" target="_blank" rel="noopener">${esc(d.wb)}</a>`);
   if(d.st||d.ci) row(MI,'Indirizzo',esc([d.st,d.ci,d.re,d.zp,d.co].filter(Boolean).join(', ')));
   if(d.li) row(LI,'LinkedIn',`<a href="${esc(d.li)}" target="_blank" rel="noopener">Profilo LinkedIn ↗</a>`);
-  if(d.tw) row(LI,'X/Twitter',`<a href="${esc(d.tw)}" target="_blank" rel="noopener">Profilo X ↗</a>`);
+  if(d.x) row(LI,'X',`<a href="${esc(d.x)}" target="_blank" rel="noopener">Profilo X ↗</a>`);
   if(d.ig) row(LI,'Instagram',`<a href="${esc(d.ig)}" target="_blank" rel="noopener">Profilo Instagram ↗</a>`);
-  if(d.gh) row(LI,'GitHub',`<a href="${esc(d.gh)}" target="_blank" rel="noopener">Profilo GitHub ↗</a>`);
-  if(d.no) row(NI,'Note',esc(d.no));
+  if(d.mp) row(LI,'Maps',`<a href="${esc(d.mp)}" target="_blank" rel="noopener">Maps ↗</a>`);
+  if(d.no) row(NI,'Note', esc(d.no).replace(/\n/g,'<br>'));
   const b64=btoa(unescape(encodeURIComponent(entry.vcStr)));
   const fns=fname.replace(/'/g,'').replace(/"/g,'');
   document.getElementById('vc-display').innerHTML=`
@@ -1117,7 +1164,7 @@ function parseVC(str){
     p1:ph[0]||'',p2:ph[1]||'',p3:ph[2]||'',fx:ph[3]||'',
     e1:em[0]||'',e2:em[1]||'',wb:g('URL'),
     st:adr[2]||'',ci:adr[3]||'',re:adr[4]||'',zp:adr[5]||'',co:adr[6]||'',
-    li:sc.linkedin||'',tw:sc.twitter||'',ig:sc.instagram||'',gh:sc.github||'',no:g('NOTE')};
+    li:sc.linkedin,x:sc.x,ig:sc.instagram,fb:sc.facebook,mp:sc.maps,tk:sc.tiktok,wbs:sc.social,no:(g('NOTE')||'').replace(/\\n/g,'\n')};
 }
 
 // ── UTILS ──
@@ -1153,8 +1200,8 @@ function openEdit(idx){
     sv('e-tit',d.tit); sv('e-p1',d.p1); sv('e-p2',d.p2); sv('e-p3',d.p3);
     sv('e-fx',d.fx); sv('e-e1',d.e1); sv('e-e2',d.e2); sv('e-wb',d.wb);
     sv('e-st',d.st); sv('e-ci',d.ci); sv('e-re',d.re); sv('e-zp',d.zp); sv('e-co',d.co);
-    sv('e-li',d.li); sv('e-x',d.tw||''); sv('e-ig',d.ig); sv('e-fb',d.fb||'');
-    sv('e-gh',d.gh); sv('e-tk',d.tk||''); sv('e-wbs',d.wbs||''); sv('e-no',d.no);
+    sv('e-li',d.li); sv('e-x',d.x||''); sv('e-ig',d.ig); sv('e-fb',d.fb||'');
+    sv('e-mp',d.mp); sv('e-tk',d.tk||''); sv('e-wbs',d.wbs||''); sv('e-no',d.no);
     document.getElementById('edit-title').textContent = 'Modifica: '+(entry.fname||'vCard');
     document.getElementById('edit-msg').innerHTML = '';
     document.getElementById('edit-overlay').classList.add('open');
@@ -1182,7 +1229,7 @@ function collectEdit(){
     p1:gve('e-p1'),p2:gve('e-p2'),p3:gve('e-p3'),fx:gve('e-fx'),
     e1:gve('e-e1'),e2:gve('e-e2'),wb:gve('e-wb'),
     st:gve('e-st'),ci:gve('e-ci'),re:gve('e-re'),zp:gve('e-zp'),co:gve('e-co'),
-    li:gve('e-li'),tw:gve('e-x'),ig:gve('e-ig'),fb:gve('e-fb'),gh:gve('e-gh'),
+    li:gve('e-li'),x:gve('e-x'),ig:gve('e-ig'),fb:gve('e-fb'),mp:gve('e-mp'),
     tk:gve('e-tk'),wbs:gve('e-wbs'),no:gve('e-no')};
 }
 
