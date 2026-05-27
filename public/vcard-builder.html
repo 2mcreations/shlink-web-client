@@ -752,7 +752,7 @@ function collect(){
 
 // ── BUILD VCARD ──
 function buildVC(d){
-  const fn=d.dn||`${d.fn} ${d.ln}`;
+  const fn=(d.dn||`${d.fn} ${d.ln}`).trim();
   const L=[
     'BEGIN:VCARD','VERSION:3.0',
     `FN:${fn}`,`N:${d.ln};${d.fn};${d.px};${d.sx}`
@@ -766,11 +766,11 @@ function buildVC(d){
   if(d.p3)  L.push(`TEL;TYPE=HOME:${d.p3}`);
   if(d.fx)  L.push(`TEL;TYPE=FAX:${d.fx}`);
   if(d.e1)  L.push(`EMAIL;TYPE=WORK:${d.e1}`);
-  if(d.e2)  L.push(`EMAIL;TYPE=PERSONAL:${d.e2}`);
+  if(d.e2)  L.push(`EMAIL;TYPE=HOME:${d.e2}`);
   if(d.wb)  L.push(`URL:${d.wb}`);
   if(d.st||d.ci) L.push(`ADR;TYPE=WORK:;;${d.st};${d.ci};${d.re};${d.zp};${d.co}`);
   if(d.li)  L.push(`X-SOCIALPROFILE;TYPE=linkedin:${d.li}`);
-  if(d.x)   L.push(`X-SOCIALPROFILE;TYPE=x:${d.x}`);
+  if(d.x)   L.push(`X-SOCIALPROFILE;TYPE=twitter:${d.x}`);
   if(d.ig)  L.push(`X-SOCIALPROFILE;TYPE=instagram:${d.ig}`);
   if(d.fb)  L.push(`X-SOCIALPROFILE;TYPE=facebook:${d.fb}`);
   if(d.mp)  L.push(`X-SOCIALPROFILE;TYPE=maps:${d.mp}`);
@@ -913,7 +913,7 @@ function renderSaved(items){
           </svg>
           Modifica
         </button>
-        <button class="bs bs-del" onclick="delEntry('${esc(sc)}','${esc(fname)}')">
+        <button class="bs bs-del" onclick="delEntry(${idx})">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
           Elimina
         </button>
@@ -922,23 +922,13 @@ function renderSaved(items){
   }).join('')}</div>`;
 }
 
-async function delEntry(sc,name){
-  if(!confirm(`Eliminare la vCard "${name}"?\nViene rimosso lo short URL da Shlink.`)) return;
-  try{await aDel(`/short-urls/${sc}`);toast(`"${name}" eliminata`,'ok');loadSaved();}
+async function delEntry(idx){
+  const entry = vcStore.get(idx);
+  if(!entry){ toast('Errore: item non trovato','err'); return; }
+  const {sc, fname} = entry;
+  if(!confirm(`Eliminare la vCard "${fname}"?\nViene rimosso lo short URL da Shlink.`)) return;
+  try{await aDel(`/short-urls/${sc}`);toast(`"${fname}" eliminata`,'ok');loadSaved();}
   catch(err){toast('Errore: '+err.message,'err');}
-}
-
-// ── PREVIEW ──
-function openPreviewFromList(longE,shortE,sc,fnE,tags){
-  const long=decodeURIComponent(longE),short=decodeURIComponent(shortE),fname=decodeURIComponent(fnE);
-  try{
-    const vc=new URL(long).searchParams.get('vc');
-    if(!vc) throw new Error('parametro vc mancante');
-    const vcStr=decodeURIComponent(escape(atob(vc)));
-    const parsed=parseVC(vcStr);
-    showPreview({shortUrl:short,shortCode:sc,longUrl:long,title:fname,tags,vcStr,parsed});
-    swRaw('vc');
-  }catch(err){toast('Errore decodifica: '+err.message,'err');}
 }
 
 // Versione sicura: legge i dati dallo store in memoria (evita corruzione da attributo onclick)
@@ -1164,7 +1154,7 @@ function parseVC(str){
     p1:ph[0]||'',p2:ph[1]||'',p3:ph[2]||'',fx:ph[3]||'',
     e1:em[0]||'',e2:em[1]||'',wb:g('URL'),
     st:adr[2]||'',ci:adr[3]||'',re:adr[4]||'',zp:adr[5]||'',co:adr[6]||'',
-    li:sc.linkedin,x:sc.x,ig:sc.instagram,fb:sc.facebook,mp:sc.maps,tk:sc.tiktok,wbs:sc.social,no:(g('NOTE')||'').replace(/\\n/g,'\n')};
+    li:sc.linkedin,x:sc.twitter||sc.x,ig:sc.instagram,fb:sc.facebook,mp:sc.maps,tk:sc.tiktok,wbs:sc.social,no:(g('NOTE')||'').replace(/\\n/g,'\n')};
 }
 
 // ── UTILS ──
