@@ -66,7 +66,8 @@ body{min-height:100dvh;font-family:var(--ff);background:var(--bg);color:var(--tx
       p1:ph[0]||'',p2:ph[1]||'',p3:ph[2]||'',fx:ph[3]||'',
       e1:em[0]||'',e2:em[1]||'',wb:g('URL'),
       st:adr[2]||'',ci:adr[3]||'',re:adr[4]||'',zp:adr[5]||'',co:adr[6]||'',
-      li:sc.linkedin||'',tw:sc.twitter||'',ig:sc.instagram||'',gh:sc.github||'',no:g('NOTE')};
+      li:sc.linkedin||'',tw:sc.twitter||sc.x||'',ig:sc.instagram||'',gh:sc.github||'',
+      fb:sc.facebook||'',tk:sc.tiktok||'',mp:sc.maps||'',wbs:sc.social||'',no:(g('NOTE')||'').replace(/\\n/g,'\n')};
     const fname=d.dn||`${d.fn} ${d.ln}`;
     const ini=fname.split(/\s+/).map(w=>w[0]||'').slice(0,2).join('').toUpperCase()||'?';
     const h=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -89,8 +90,12 @@ body{min-height:100dvh;font-family:var(--ff);background:var(--bg);color:var(--tx
     if(d.li) row(LI,'LinkedIn',`<a href="${h(d.li)}" target="_blank" rel="noopener">LinkedIn ↗</a>`);
     if(d.tw) row(LI,'X/Twitter',`<a href="${h(d.tw)}" target="_blank" rel="noopener">X / Twitter ↗</a>`);
     if(d.ig) row(LI,'Instagram',`<a href="${h(d.ig)}" target="_blank" rel="noopener">Instagram ↗</a>`);
+    if(d.fb) row(LI,'Facebook',`<a href="${h(d.fb)}" target="_blank" rel="noopener">Facebook ↗</a>`);
+    if(d.tk) row(LI,'TikTok',`<a href="${h(d.tk)}" target="_blank" rel="noopener">TikTok ↗</a>`);
+    if(d.mp) row(LI,'Mappa',`<a href="${h(d.mp)}" target="_blank" rel="noopener">Posizione / Mappa ↗</a>`);
+    if(d.wbs) row(LI,'Social',`<a href="${h(d.wbs)}" target="_blank" rel="noopener">Altro Social ↗</a>`);
     if(d.gh) row(LI,'GitHub',`<a href="${h(d.gh)}" target="_blank" rel="noopener">GitHub ↗</a>`);
-    if(d.no) row(NI,'Note',h(d.no));
+    if(d.no) row(NI,'Note',h(d.no).replace(/\n/g,'<br>'));
     document.getElementById('root').innerHTML=`<div class="card">
       <div class="hero">
         <div class="av">${ini}</div>
