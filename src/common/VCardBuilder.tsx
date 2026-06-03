@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 
-const VCARD_VERSION = '2.1.2';
+const VCARD_VERSION = '2.1.3';
 
 export const VCardBuilder: FC = () => (
   <iframe

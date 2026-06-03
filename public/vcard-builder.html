@@ -351,7 +351,6 @@ main{padding:var(--s8) var(--s6);max-width:1100px;margin:0 auto;width:100%}
   .qr-actions .btn-sec{justify-content:center}
 }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.2.2/build/qrcode.min.js"></script>
 </head>
 <body>
 <div class="app">
@@ -594,9 +593,7 @@ main{padding:var(--s8) var(--s6);max-width:1100px;margin:0 auto;width:100%}
 </div>
 </div><!-- .app -->
 
-<!-- ╔═══════════════════════════
-     QR MODAL
-════════════════════════════╗ -->
+<!-- QR MODAL -->
 <div class="modal-overlay" id="qr-overlay" onclick="closeQR(event)">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="qr-title">
     <div class="modal-head">
@@ -606,12 +603,9 @@ main{padding:var(--s8) var(--s6);max-width:1100px;margin:0 auto;width:100%}
       </button>
     </div>
     <div class="modal-body">
-      <!-- preview -->
       <div class="qr-preview" id="qr-preview">
         <canvas id="qr-canvas"></canvas>
       </div>
-
-      <!-- controls -->
       <div class="qr-controls">
         <div class="qr-fg">
           <label>Dimensione (px)</label>
@@ -621,7 +615,7 @@ main{padding:var(--s8) var(--s6);max-width:1100px;margin:0 auto;width:100%}
           <label>Formato</label>
           <select id="qr-fmt" onchange="refreshQR()">
             <option value="png">PNG</option>
-            <option value="svg"selected>SVG</option>
+            <option value="svg" selected>SVG</option>
           </select>
         </div>
         <div class="qr-fg">
@@ -630,7 +624,7 @@ main{padding:var(--s8) var(--s6);max-width:1100px;margin:0 auto;width:100%}
             <option value="L">L — bassa (7%)</option>
             <option value="M">M — media (15%)</option>
             <option value="Q">Q — alta (25%)</option>
-            <option value="H"selected>H — massima (30%)</option>
+            <option value="H" selected>H — massima (30%)</option>
           </select>
         </div>
         <div class="qr-fg">
@@ -655,8 +649,6 @@ main{padding:var(--s8) var(--s6);max-width:1100px;margin:0 auto;width:100%}
           <span class="hint" id="qr-url-hint" style="word-break:break-all"></span>
         </div>
       </div>
-
-      <!-- actions -->
       <div class="qr-actions">
         <button class="btn-pri" onclick="downloadQR()">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -673,10 +665,15 @@ main{padding:var(--s8) var(--s6);max-width:1100px;margin:0 auto;width:100%}
 
 <div class="toasts" id="toasts"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.2.2/build/qrcode.min.js"></script>
+<script>window.QRCanvasLib = window.QRCode;</script>
+<script src="https://unpkg.com/qrcode-svg@1.1.0/lib/qrcode.js"></script>
+<script>window.QRSvgLib = window.QRCode;</script>
+
 <script>
 'use strict';
 
-// â”€â”€ THEME â”€â”€
+// ── THEME ──
 (()=>{
   const btn=document.querySelector('[data-theme-toggle]'),r=document.documentElement;
   let d=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';
@@ -688,11 +685,40 @@ main{padding:var(--s8) var(--s6);max-width:1100px;margin:0 auto;width:100%}
 let CFG=null;        // {name, url, apiKey}
 let PAGE_URL=window.location.origin+'/vc/';
 
-// QR modal state
-let qrShortCode='';
-let qrShortUrl='';
-let qrTimer=null;
 const vcStore=new Map();
+
+// ── ENCODE / DECODE UTF-8 + BASE64 ──
+function b64Encode(str){
+  const bytes=new TextEncoder().encode(str);
+  let bin='';
+  bytes.forEach(b=>bin+=String.fromCharCode(b));
+  return btoa(bin);
+}
+function b64Decode(b64){
+  const bin=atob(b64);
+  const bytes=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+// ── VCARD ESCAPING RFC 6350 ──
+function vcEsc(s){
+  if(!s) return '';
+  return String(s)
+    .replace(/\\/g,'\\\\')
+    .replace(/,/g,'\\,')
+    .replace(/;/g,'\\;')
+    .replace(/\r\n|\r|\n/g,'\\n');
+}
+// Inverse: unescape per parseVC
+function vcUnesc(s){
+  if(!s) return '';
+  return String(s)
+    .replace(/\\n/gi,'\n')
+    .replace(/\\;/g,';')
+    .replace(/\\,/g,',')
+    .replace(/\\\\/g,'\\');
+}
 
 // ── BOOT ──
 (async()=>{
@@ -752,15 +778,16 @@ function collect(){
 
 // ── BUILD VCARD ──
 function buildVC(d){
-  const fn=(d.dn||`${d.fn} ${d.ln}`).trim();
+  const fn=vcEsc(d.dn||`${d.fn} ${d.ln}`.trim());
   const L=[
     'BEGIN:VCARD','VERSION:3.0',
-    `FN:${fn}`,`N:${d.ln};${d.fn};${d.px};${d.sx}`
+    `FN:${fn}`,
+    `N:${vcEsc(d.ln)};${vcEsc(d.fn)};;${vcEsc(d.px)};${vcEsc(d.sx)}`
   ];
-  if(d.nn) L.push(`NICKNAME:${d.nn}`);
-  if(d.org&&d.dep) L.push(`ORG:${d.org};${d.dep}`);
-  else if(d.org) L.push(`ORG:${d.org}`);
-  if(d.tit) L.push(`TITLE:${d.tit}`);
+  if(d.nn) L.push(`NICKNAME:${vcEsc(d.nn)}`);
+  if(d.org&&d.dep) L.push(`ORG:${vcEsc(d.org)};${vcEsc(d.dep)}`);
+  else if(d.org) L.push(`ORG:${vcEsc(d.org)}`);
+  if(d.tit) L.push(`TITLE:${vcEsc(d.tit)}`);
   if(d.p1)  L.push(`TEL;TYPE=WORK,VOICE:${d.p1}`);
   if(d.p2)  L.push(`TEL;TYPE=CELL:${d.p2}`);
   if(d.p3)  L.push(`TEL;TYPE=HOME:${d.p3}`);
@@ -768,7 +795,7 @@ function buildVC(d){
   if(d.e1)  L.push(`EMAIL;TYPE=WORK:${d.e1}`);
   if(d.e2)  L.push(`EMAIL;TYPE=HOME:${d.e2}`);
   if(d.wb)  L.push(`URL:${d.wb}`);
-  if(d.st||d.ci) L.push(`ADR;TYPE=WORK:;;${d.st};${d.ci};${d.re};${d.zp};${d.co}`);
+  if(d.st||d.ci) L.push(`ADR;TYPE=WORK:;;${vcEsc(d.st)};${vcEsc(d.ci)};${vcEsc(d.re)};${vcEsc(d.zp)};${vcEsc(d.co)}`);
   if(d.li)  L.push(`X-SOCIALPROFILE;TYPE=linkedin:${d.li}`);
   if(d.x)   L.push(`X-SOCIALPROFILE;TYPE=twitter:${d.x}`);
   if(d.ig)  L.push(`X-SOCIALPROFILE;TYPE=instagram:${d.ig}`);
@@ -776,9 +803,15 @@ function buildVC(d){
   if(d.mp)  L.push(`X-SOCIALPROFILE;TYPE=maps:${d.mp}`);
   if(d.tk)  L.push(`X-SOCIALPROFILE;TYPE=tiktok:${d.tk}`);
   if(d.wbs) L.push(`X-SOCIALPROFILE;TYPE=social:${d.wbs}`);
-  if(d.no)  L.push('NOTE:' + d.no.replace(/\r\n/g,'\n').replace(/\n/g,'\\n'));
+  if(d.no)  L.push(`NOTE:${vcEsc(d.no)}`);
   L.push(`REV:${new Date().toISOString()}`,'END:VCARD');
   return L.join('\r\n');
+}
+
+// ── SLUG VALIDATION ──
+function validateSlug(slug){
+  if(!slug) return true; // vuoto = auto, ok
+  return /^[a-zA-Z0-9_-]+$/.test(slug);
 }
 
 // ── SHLINK API ──
@@ -815,15 +848,18 @@ async function saveVC(e){
   if(!CFG){toast('Configurazione Shlink non disponibile','err');return;}
   const d=collect();
   if(!d.fn){toast('Nome obbligatorio','err');return;}
+  const slug=gv('slug')||undefined;
+  if(slug&&!validateSlug(slug)){
+    toast('Slug non valido: usa solo lettere, numeri, - e _','err');return;
+  }
   const btn=document.getElementById('sbtn');
   btn.disabled=true;
   btn.innerHTML=`<div class="spin" style="width:16px;height:16px;border-width:2px;margin:0"></div> Salvataggio…`;
   try{
     const vcStr=buildVC(d);
-    const enc=btoa(unescape(encodeURIComponent(vcStr)));
+    const enc=b64Encode(vcStr);
     const fname=d.dn||`${d.fn} ${d.ln}`;
     const longUrl=`${PAGE_URL}?vc=${encodeURIComponent(enc)}`;
-    const slug=gv('slug')||undefined;
     const tags=['vcard'];
     if(d.org) tags.push(d.org.toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,30));
     const res=await aPost('/short-urls',{longUrl,...(slug?{customSlug:slug}:{}),findIfExists:false,tags,title:fname});
@@ -870,10 +906,10 @@ function renderSaved(items){
     const long=item.longUrl||'';
     const sc=item.shortCode||'';
     const ini=fname.split(' ').map(w=>w[0]||'').slice(0,2).join('').toUpperCase()||'?';
-    const sub=tags.filter(t=>t !== 'vcard').join(' · ');
+    const sub=tags.filter(t=>t!=='vcard').join(' · ');
     const vis=item.visitsSummary?.total??item.visitsCount??0;
-    // Salvo l'item nello store indicizzato — nessun dato inline nell'onclick
-    vcStore.set(idx, {long, short, sc, fname, tags});
+    // I dati restano in vcStore — nessun dato sensibile negli attributi onclick
+    vcStore.set(idx,{long,short,sc,fname,tags});
     return `<div class="vi">
       <div class="av">${ini}</div>
       <div class="vi-info">
@@ -886,7 +922,7 @@ function renderSaved(items){
         <div class="link-row">
           <div class="lchip">
             <a href="${esc(short)}" target="_blank" rel="noopener noreferrer">${esc(short)}</a>
-            <button class="cbtn" onclick="copyUrl('${esc(short)}')" title="Copia link">
+            <button class="cbtn" onclick="copyFromStore(${idx})" title="Copia link">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
             </button>
           </div>
@@ -897,7 +933,7 @@ function renderSaved(items){
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           Visualizza
         </button>
-        <button class="bs bs-qr" onclick="openQR('${esc(sc)}','${esc(short)}')">
+        <button class="bs bs-qr" onclick="openQRFromStore(${idx})">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
             <rect x="3" y="14" width="7" height="7" rx="1"/>
@@ -922,16 +958,21 @@ function renderSaved(items){
   }).join('')}</div>`;
 }
 
+// Copia URL dallo store (evita URL raw negli attributi onclick)
+function copyFromStore(idx){
+  const entry=vcStore.get(idx);
+  if(entry) copyUrl(entry.short);
+}
+
 async function delEntry(idx){
-  const entry = vcStore.get(idx);
-  if(!entry){ toast('Errore: item non trovato','err'); return; }
-  const {sc, fname} = entry;
+  const entry=vcStore.get(idx);
+  if(!entry){toast('Errore: item non trovato','err');return;}
+  const {sc,fname}=entry;
   if(!confirm(`Eliminare la vCard "${fname}"?\nViene rimosso lo short URL da Shlink.`)) return;
   try{await aDel(`/short-urls/${sc}`);toast(`"${fname}" eliminata`,'ok');loadSaved();}
   catch(err){toast('Errore: '+err.message,'err');}
 }
 
-// Versione sicura: legge i dati dallo store in memoria (evita corruzione da attributo onclick)
 function openPreviewFromStore(idx){
   const entry=vcStore.get(idx);
   if(!entry){toast('Errore: item non trovato','err');return;}
@@ -939,19 +980,26 @@ function openPreviewFromStore(idx){
   try{
     const vc=new URL(long).searchParams.get('vc');
     if(!vc) throw new Error('parametro vc mancante nel longUrl');
-    const vcStr=decodeURIComponent(escape(atob(vc)));
+    const vcStr=b64Decode(vc);
     const parsed=parseVC(vcStr);
     showPreview({shortUrl:short,shortCode:sc,longUrl:long,title:fname,tags,vcStr,parsed});
     swRaw('vc');
   }catch(err){toast('Errore decodifica: '+err.message,'err');}
 }
 
+// Apre QR leggendo dallo store (evita URL in attributi onclick)
+function openQRFromStore(idx){
+  const entry=vcStore.get(idx);
+  if(!entry){toast('Errore: item non trovato','err');return;}
+  openQR(entry.sc, entry.short);
+}
+
 function openFromParam(vcParam){
   swRaw('vc');
   try{
-    const vcStr=decodeURIComponent(escape(atob(vcParam)));
+    const vcStr=b64Decode(vcParam);
     const parsed=parseVC(vcStr);
-    const fname=parsed.dn||`${parsed.fn} ${parsed.ln}`;
+    const fname=parsed.dn||`${parsed.fn} ${parsed.ln}`.trim()||'Contatto';
     showPreview({shortUrl:'',shortCode:'',longUrl:window.location.href,title:fname,tags:['vcard'],vcStr,parsed});
     setTimeout(()=>triggerDl(vcStr,fname),500);
   }catch(err){
@@ -961,7 +1009,7 @@ function openFromParam(vcParam){
 }
 
 function showPreview(entry){
-  const d=entry.parsed,fname=entry.title||d.dn||`${d.fn} ${d.ln}`;
+  const d=entry.parsed,fname=entry.title||d.dn||`${d.fn} ${d.ln}`.trim();
   const ini=fname.split(/\s+/).map(w=>w[0]||'').slice(0,2).join('').toUpperCase()||'?';
   const share=entry.shortUrl||entry.longUrl,sc=entry.shortCode||'';
   const rows=[];
@@ -972,21 +1020,22 @@ function showPreview(entry){
   const MI=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
   const LI=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`;
   const NI=`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
-  if(d.p1) row(PI,'Telefono',`<a href="tel:${d.p1}">${esc(d.p1)}</a>`);
+  if(d.p1) row(PI,'Telefono Lavoro',`<a href="tel:${d.p1}">${esc(d.p1)}</a>`);
   if(d.p2) row(PI,'Cellulare',`<a href="tel:${d.p2}">${esc(d.p2)}</a>`);
-  if(d.p3) row(PI,'Tel. 3',`<a href="tel:${d.p3}">${esc(d.p3)}</a>`);
+  if(d.p3) row(PI,'Telefono Casa',`<a href="tel:${d.p3}">${esc(d.p3)}</a>`);
   if(d.fx) row(PI,'Fax',esc(d.fx));
   if(d.e1) row(EI,'Email',`<a href="mailto:${d.e1}">${esc(d.e1)}</a>`);
-  if(d.e2) row(EI,'Email 2',`<a href="mailto:${d.e2}">${esc(d.e2)}</a>`);
+  if(d.e2) row(EI,'Email Personale',`<a href="mailto:${d.e2}">${esc(d.e2)}</a>`);
   if(d.wb) row(WI,'Sito web',`<a href="${esc(d.wb)}" target="_blank" rel="noopener">${esc(d.wb)}</a>`);
   if(d.st||d.ci) row(MI,'Indirizzo',esc([d.st,d.ci,d.re,d.zp,d.co].filter(Boolean).join(', ')));
   if(d.li) row(LI,'LinkedIn',`<a href="${esc(d.li)}" target="_blank" rel="noopener">Profilo LinkedIn ↗</a>`);
-  if(d.x) row(LI,'X',`<a href="${esc(d.x)}" target="_blank" rel="noopener">Profilo X ↗</a>`);
+  if(d.x)  row(LI,'X',`<a href="${esc(d.x)}" target="_blank" rel="noopener">Profilo X ↗</a>`);
   if(d.ig) row(LI,'Instagram',`<a href="${esc(d.ig)}" target="_blank" rel="noopener">Profilo Instagram ↗</a>`);
   if(d.mp) row(LI,'Maps',`<a href="${esc(d.mp)}" target="_blank" rel="noopener">Maps ↗</a>`);
-  if(d.no) row(NI,'Note', esc(d.no).replace(/\n/g,'<br>'));
-  const b64=btoa(unescape(encodeURIComponent(entry.vcStr)));
-  const fns=fname.replace(/'/g,'').replace(/"/g,'');
+  if(d.no) row(NI,'Note',esc(d.no).replace(/\n/g,'<br>'));
+  const b64=b64Encode(entry.vcStr);
+  const dlIdx=entry.shortCode||'dl';
+  vcStore.set('dl:'+dlIdx,{vcStr:entry.vcStr,fname});
   document.getElementById('vc-display').innerHTML=`
     <div style="display:flex;gap:var(--s3);margin-bottom:var(--s5);flex-wrap:wrap;align-items:center">
       <button class="btn-sec" onclick="sw('saved')">← Elenco</button>
@@ -1004,7 +1053,7 @@ function showPreview(entry){
       </div>
       <div class="vc-body">${rows.join('')}</div>
       <div class="vc-foot">
-        <button class="vc-dl" onclick="dlB64('${b64}','${esc(fns)}')">
+        <button class="vc-dl" onclick="dlFromStore('${esc('dl:'+dlIdx)}')">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Scarica contatto (.vcf)
         </button>
@@ -1018,121 +1067,175 @@ function showPreview(entry){
     </div>`;
 }
 
-// ══════════════════════════════════
-// QR MODAL
-// ══════════════════════════════════
-function openQR(sc, shortUrl){
-  qrShortCode = sc;
-  qrShortUrl = shortUrl;
-
-  document.getElementById('qr-overlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
-
-  if(typeof QRCode === 'undefined' || !QRCode.toCanvas){
-    toast('Libreria QR non caricata', 'err');
-    return;
-  }
-
-  refreshQR();
+// Download dalla preview usando lo store (evita b64 inline)
+function dlFromStore(key){
+  const entry=vcStore.get(key);
+  if(!entry){toast('Errore: dati non trovati','err');return;}
+  triggerDl(entry.vcStr,entry.fname);
 }
 
-function refreshQR(){
-  const canvas = document.getElementById('qr-canvas');
-  if(!canvas || !qrShortUrl) return;
+// ── QR MODULE ──
+let qrShortCode='';
+let qrShortUrl='';
+let qrTimer=null;
 
-  if(typeof QRCode === 'undefined' || !QRCode.toCanvas){
-    toast('Libreria QR non caricata', 'err');
-    return;
+const QR_DEFAULTS=Object.freeze({
+  size:300,minSize:50,maxSize:1000,
+  margin:1,minMargin:0,maxMargin:10,
+  ec:'H',color:'#000000',bg:'#ffffff',format:'svg'
+});
+
+function qrEl(id){return document.getElementById(id);}
+
+function qrSafeInt(value,fallback){
+  const n=parseInt(value,10);
+  return Number.isFinite(n)?n:fallback;
+}
+
+function qrClamp(n,min,max){return Math.min(max,Math.max(min,n));}
+
+function qrHex(value,fallback){
+  const v=String(value||'').trim();
+  return /^#[0-9a-fA-F]{6}$/.test(v)?v.toLowerCase():fallback;
+}
+
+function qrGetOptions(){
+  const size=qrClamp(qrSafeInt(qrEl('qr-size')?.value,QR_DEFAULTS.size),QR_DEFAULTS.minSize,QR_DEFAULTS.maxSize);
+  const margin=qrClamp(qrSafeInt(qrEl('qr-margin')?.value,QR_DEFAULTS.margin),QR_DEFAULTS.minMargin,QR_DEFAULTS.maxMargin);
+  const ec=['L','M','Q','H'].includes(qrEl('qr-ec')?.value)?qrEl('qr-ec').value:QR_DEFAULTS.ec;
+  const color=qrHex(qrEl('qr-color')?.value,QR_DEFAULTS.color);
+  const bg=qrHex(qrEl('qr-bg')?.value,QR_DEFAULTS.bg);
+  const format=['png','svg'].includes(qrEl('qr-fmt')?.value)?qrEl('qr-fmt').value:QR_DEFAULTS.format;
+  if(qrEl('qr-size')) qrEl('qr-size').value=String(size);
+  if(qrEl('qr-margin')) qrEl('qr-margin').value=String(margin);
+  if(qrEl('qr-color')) qrEl('qr-color').value=color;
+  if(qrEl('qr-bg')) qrEl('qr-bg').value=bg;
+  if(qrEl('qr-color-val')) qrEl('qr-color-val').textContent=color;
+  if(qrEl('qr-bg-val')) qrEl('qr-bg-val').textContent=bg;
+  if(qrEl('qr-url-hint')) qrEl('qr-url-hint').textContent=qrShortUrl||'—';
+  return{size,margin,ec,color,bg,format};
+}
+
+function qrEnsureReady(){
+  if(!qrShortUrl) throw new Error('URL QR non disponibile');
+  if(!window.QRCanvasLib||typeof window.QRCanvasLib.toCanvas!=='function') throw new Error('Libreria canvas QR non caricata');
+  if(!window.QRSvgLib) throw new Error('Libreria SVG QR non caricata');
+}
+
+function openQR(sc,shortUrl){
+  qrShortCode=String(sc||'').trim();
+  qrShortUrl=String(shortUrl||'').trim();
+  const overlay=qrEl('qr-overlay');
+  if(!overlay){toast('Modal QR non trovato','err');return;}
+  try{
+    qrEnsureReady();
+    overlay.classList.add('open');
+    document.body.style.overflow='hidden';
+    refreshQR();
+  }catch(err){
+    toast(err.message||'Errore QR','err');
   }
+}
 
-  const size   = parseInt(document.getElementById('qr-size').value) || 300;
-  const color  = document.getElementById('qr-color').value || '#000000';
-  const bg     = document.getElementById('qr-bg').value || '#ffffff';
-  const ec     = document.getElementById('qr-ec').value || 'H';
-  const margin = parseInt(document.getElementById('qr-margin').value) || 1;
+function closeQR(e){if(e?.target===qrEl('qr-overlay')) closeQRForce();}
 
-  document.getElementById('qr-color-val').textContent = color;
-  document.getElementById('qr-bg-val').textContent = bg;
-  document.getElementById('qr-url-hint').textContent = qrShortUrl;
-
-  QRCode.toCanvas(canvas, qrShortUrl, {
-    width: size,
-    margin: margin,
-    errorCorrectionLevel: ec,
-    color: { dark: color, light: bg }
-  }, err => {
-    if(err) toast('Errore QR: ' + err.message, 'err');
-  });
+function closeQRForce(){
+  qrEl('qr-overlay')?.classList.remove('open');
+  document.body.style.overflow='';
+  clearTimeout(qrTimer);
 }
 
 function debounceQR(){
   clearTimeout(qrTimer);
-  qrTimer=setTimeout(refreshQR,300);
+  qrTimer=setTimeout(()=>refreshQR(),180);
 }
 
-function qrLoaded(){}
-function qrError(){}
-
-function downloadQR() {
-  const fmt = document.getElementById('qr-fmt').value || 'png';
-
-  if (fmt === 'svg') {
-    // Genera SVG via QRCode.toString()
-    const size   = parseInt(document.getElementById('qr-size').value) || 300;
-    const color  = document.getElementById('qr-color').value || '#000000';
-    const bg     = document.getElementById('qr-bg').value || '#ffffff';
-    const ec     = document.getElementById('qr-ec').value || 'H';
-    const margin = parseInt(document.getElementById('qr-margin').value) || 1;
-
-    QRCode.toString(qrShortUrl, {
-      type: 'svg',
-      width: size,
-      margin: margin,
-      errorCorrectionLevel: ec,
-      color: { dark: color, light: bg }
-    }, (err, svgString) => {
-      if (err) { toast('Errore generazione SVG: ' + err.message, 'err'); return; }
-      const blob = new Blob([svgString], { type: 'image/svg+xml' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'qr-' + qrShortCode + '.svg';
-      a.click();
-      URL.revokeObjectURL(a.href);
-      toast('QR SVG scaricato!', 'ok');
-    });
-
-  } else {
-    // PNG dal canvas esistente
-    const canvas = document.getElementById('qr-canvas');
-    if (!canvas) { toast('QR non pronto', 'err'); return; }
-    canvas.toBlob(blob => {
-      if (!blob) { toast('Errore generazione PNG', 'err'); return; }
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'qr-' + qrShortCode + '.png';
-      a.click();
-      URL.revokeObjectURL(a.href);
-      toast('QR PNG scaricato!', 'ok');
-    }, 'image/png');
+function refreshQR(){
+  try{
+    qrEnsureReady();
+    const canvas=qrEl('qr-canvas');
+    if(!canvas) throw new Error('Canvas QR non trovato');
+    const opt=qrGetOptions();
+    canvas.width=opt.size;
+    canvas.height=opt.size;
+    canvas.style.width=Math.min(opt.size,320)+'px';
+    canvas.style.height='auto';
+    window.QRCanvasLib.toCanvas(canvas,qrShortUrl,{
+      width:opt.size,margin:opt.margin,errorCorrectionLevel:opt.ec,
+      color:{dark:opt.color,light:opt.bg}
+    },err=>{if(err) toast('Errore QR: '+(err.message||err),'err');});
+  }catch(err){
+    toast(err.message||'Errore refresh QR','err');
   }
 }
 
 function copyQRUrl(){
+  if(!qrShortUrl){toast('Link QR non disponibile','err');return;}
   copyUrl(qrShortUrl);
 }
 
-
-function closeQR(e){
-  if(e.target===document.getElementById('qr-overlay')) closeQRForce();
+function buildSvgMarkup(){
+  const opt=qrGetOptions();
+  let svg;
+  try{
+    const qr=new window.QRSvgLib({
+      content:qrShortUrl,padding:opt.margin,
+      width:opt.size,height:opt.size,
+      color:opt.color,background:opt.bg,
+      ecl:opt.ec,join:true,container:'svg-viewbox'
+    });
+    svg=qr.svg();
+  }catch(err){throw new Error('Generazione SVG fallita: '+(err.message||err));}
+  if(typeof svg!=='string'||!svg.includes('<svg')) throw new Error('SVG QR non valido');
+  svg=svg.replace(/<svg\b([^>]*)>/i,'<svg$1 shape-rendering="crispEdges" aria-label="QR code">');
+  return svg;
 }
-function closeQRForce(){
-  document.getElementById('qr-overlay').classList.remove('open');
-  document.body.style.overflow='';
+
+function triggerBlobDownload(blob,filename){
+  const a=document.createElement('a');
+  const url=URL.createObjectURL(blob);
+  a.href=url;a.download=filename;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+function sanitizeQrFilename(){
+  return `qr-${(qrShortCode||'code').replace(/[^a-z0-9_-]/gi,'-')}`;
+}
+
+function downloadQR(){
+  try{
+    qrEnsureReady();
+    const opt=qrGetOptions();
+    if(opt.format==='svg'){
+      const svg=buildSvgMarkup();
+      const blob=new Blob([svg],{type:'image/svg+xml;charset=utf-8'});
+      triggerBlobDownload(blob,sanitizeQrFilename()+'.svg');
+      toast('QR SVG scaricato!','ok');
+      return;
+    }
+    const canvas=qrEl('qr-canvas');
+    if(!canvas) throw new Error('Canvas QR non trovato');
+    // Aspetta che QRCode.toCanvas finisca, poi esegue toBlob nella sua callback
+    window.QRCanvasLib.toCanvas(canvas,qrShortUrl,{
+      width:opt.size,margin:opt.margin,errorCorrectionLevel:opt.ec,
+      color:{dark:opt.color,light:opt.bg}
+    },err=>{
+      if(err){toast('Errore QR: '+(err.message||err),'err');return;}
+      canvas.toBlob(blob=>{
+        if(!blob){toast('Errore generazione PNG','err');return;}
+        triggerBlobDownload(blob,sanitizeQrFilename()+'.png');
+        toast('QR PNG scaricato!','ok');
+      },'image/png');
+    });
+  }catch(err){
+    toast(err.message||'Errore export QR','err');
+  }
 }
 
 // ── DOWNLOAD VCARD ──
 function dlB64(b64,fn){
-  const vcStr=decodeURIComponent(escape(atob(b64)));
+  const vcStr=b64Decode(b64);
   triggerDl(vcStr,fn);
 }
 function triggerDl(vcStr,fn){
@@ -1145,16 +1248,37 @@ function triggerDl(vcStr,fn){
 
 // ── PARSE VCARD ──
 function parseVC(str){
-  const g=f=>{const m=str.match(new RegExp('^'+f+'[^:]*:(.*)$','im'));return m?m[1].trim():'';};
-  const ga=f=>[...str.matchAll(new RegExp('^'+f+'[^:]*:(.*)$','gim'))].map(m=>m[1].trim());
-  const sc={};[...str.matchAll(/^X-SOCIALPROFILE;TYPE=([^:]+):(.*)$/gim)].forEach(m=>sc[m[1].toLowerCase()]=m[2].trim());
-  const n=g('N').split(';'),adr=g('ADR').split(';'),ph=ga('TEL'),em=ga('EMAIL');
-  return{fn:n[1]||'',ln:n[0]||'',dn:g('FN'),px:n[3]||'',sx:n[4]||'',nn:g('NICKNAME'),
-    org:g('ORG').split(';')[0],dep:g('ORG').split(';')[1]||'',tit:g('TITLE'),
+  const g=f=>{
+    const m=str.match(new RegExp('^'+f+'[^:]*:(.*)$','im'));
+    return m?vcUnesc(m[1].trim()):'';
+  };
+  const ga=f=>[...str.matchAll(new RegExp('^'+f+'[^:]*:(.*)$','gim'))].map(m=>vcUnesc(m[1].trim()));
+  const sc={};
+  [...str.matchAll(/^X-SOCIALPROFILE;TYPE=([^:]+):(.*)$/gim)]
+    .forEach(m=>sc[m[1].toLowerCase()]=m[2].trim());
+  const n=g('N').split(';');
+  const adr=g('ADR').split(';');
+  const ph=ga('TEL');
+  const em=ga('EMAIL');
+  return{
+    fn: vcUnesc(n[1]||''),
+    ln: vcUnesc(n[0]||''),
+    dn: g('FN'),
+    px: vcUnesc(n[3]||''),
+    sx: vcUnesc(n[4]||''),
+    nn: g('NICKNAME'),
+    org: g('ORG').split(';')[0],
+    dep: g('ORG').split(';')[1]||'',
+    tit: g('TITLE'),
     p1:ph[0]||'',p2:ph[1]||'',p3:ph[2]||'',fx:ph[3]||'',
-    e1:em[0]||'',e2:em[1]||'',wb:g('URL'),
-    st:adr[2]||'',ci:adr[3]||'',re:adr[4]||'',zp:adr[5]||'',co:adr[6]||'',
-    li:sc.linkedin,x:sc.twitter||sc.x,ig:sc.instagram,fb:sc.facebook,mp:sc.maps,tk:sc.tiktok,wbs:sc.social,no:(g('NOTE')||'').replace(/\\n/g,'\n')};
+    e1:em[0]||'',e2:em[1]||'',
+    wb: g('URL'),
+    st:vcUnesc(adr[2]||''),ci:vcUnesc(adr[3]||''),
+    re:vcUnesc(adr[4]||''),zp:vcUnesc(adr[5]||''),co:vcUnesc(adr[6]||''),
+    li:sc.linkedin||'',x:sc.twitter||sc.x||'',ig:sc.instagram||'',
+    fb:sc.facebook||'',mp:sc.maps||'',tk:sc.tiktok||'',wbs:sc.social||'',
+    no: g('NOTE')
+  };
 }
 
 // ── UTILS ──
@@ -1162,7 +1286,11 @@ async function copyUrl(url){
   try{await navigator.clipboard.writeText(url);toast('Link copiato!','ok');}
   catch(_){toast('Impossibile copiare','err');}
 }
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function esc(s){
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 function toast(msg,type=''){
   const c=document.getElementById('toasts');
   const t=document.createElement('div');
@@ -1173,47 +1301,46 @@ function toast(msg,type=''){
 }
 
 // ── EDIT MODAL ──
-let editIdx = null;
+let editIdx=null;
 
 function openEdit(idx){
-  const entry = vcStore.get(idx);
-  if(!entry){ toast('Errore: item non trovato','err'); return; }
-  editIdx = idx;
+  const entry=vcStore.get(idx);
+  if(!entry){toast('Errore: item non trovato','err');return;}
+  editIdx=idx;
   try{
-    const vc = new URL(entry.long).searchParams.get('vc');
+    const vc=new URL(entry.long).searchParams.get('vc');
     if(!vc) throw new Error('parametro vc mancante');
-    const vcStr = decodeURIComponent(escape(atob(vc)));
-    const d = parseVC(vcStr);
-    const sv = (id,val) => { const el=document.getElementById(id); if(el) el.value=val||''; };
-    sv('e-fn',d.fn); sv('e-ln',d.ln); sv('e-dn',d.dn); sv('e-px',d.px);
-    sv('e-sx',d.sx); sv('e-nn',d.nn); sv('e-org',d.org); sv('e-dep',d.dep);
-    sv('e-tit',d.tit); sv('e-p1',d.p1); sv('e-p2',d.p2); sv('e-p3',d.p3);
-    sv('e-fx',d.fx); sv('e-e1',d.e1); sv('e-e2',d.e2); sv('e-wb',d.wb);
-    sv('e-st',d.st); sv('e-ci',d.ci); sv('e-re',d.re); sv('e-zp',d.zp); sv('e-co',d.co);
-    sv('e-li',d.li); sv('e-x',d.x||''); sv('e-ig',d.ig); sv('e-fb',d.fb||'');
-    sv('e-mp',d.mp); sv('e-tk',d.tk||''); sv('e-wbs',d.wbs||''); sv('e-no',d.no);
-    document.getElementById('edit-title').textContent = 'Modifica: '+(entry.fname||'vCard');
-    document.getElementById('edit-msg').innerHTML = '';
+    const vcStr=b64Decode(vc);
+    const d=parseVC(vcStr);
+    const sv=(id,val)=>{const el=document.getElementById(id);if(el) el.value=val||'';};
+    sv('e-fn',d.fn);sv('e-ln',d.ln);sv('e-dn',d.dn);sv('e-px',d.px);
+    sv('e-sx',d.sx);sv('e-nn',d.nn);sv('e-org',d.org);sv('e-dep',d.dep);
+    sv('e-tit',d.tit);sv('e-p1',d.p1);sv('e-p2',d.p2);sv('e-p3',d.p3);
+    sv('e-fx',d.fx);sv('e-e1',d.e1);sv('e-e2',d.e2);sv('e-wb',d.wb);
+    sv('e-st',d.st);sv('e-ci',d.ci);sv('e-re',d.re);sv('e-zp',d.zp);sv('e-co',d.co);
+    sv('e-li',d.li);sv('e-x',d.x);sv('e-ig',d.ig);sv('e-fb',d.fb);
+    sv('e-mp',d.mp);sv('e-tk',d.tk);sv('e-wbs',d.wbs);sv('e-no',d.no);
+    document.getElementById('edit-title').textContent='Modifica: '+(entry.fname||'vCard');
+    document.getElementById('edit-msg').innerHTML='';
     document.getElementById('edit-overlay').classList.add('open');
-    document.body.style.overflow = 'hidden';
-  }catch(err){ toast('Errore decodifica: '+err.message,'err'); }
+    document.body.style.overflow='hidden';
+  }catch(err){toast('Errore decodifica: '+err.message,'err');}
 }
 
 function closeEdit(){
   document.getElementById('edit-overlay').classList.remove('open');
-  document.body.style.overflow = '';
-  editIdx = null;
+  document.body.style.overflow='';
+  editIdx=null;
 }
 
 function closeEditOnBg(e){
-  if(e.target === document.getElementById('edit-overlay')) closeEdit();
+  if(e.target===document.getElementById('edit-overlay')) closeEdit();
 }
 
-// ESC chiude anche l'edit (aggiunto al listener esistente)
-document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeQRForce(); closeEdit(); }});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeQRForce();closeEdit();}});
 
 function collectEdit(){
-  const gve = id => document.getElementById(id)?.value.trim()||'';
+  const gve=id=>document.getElementById(id)?.value.trim()||'';
   return{fn:gve('e-fn'),ln:gve('e-ln'),dn:gve('e-dn'),px:gve('e-px'),sx:gve('e-sx'),nn:gve('e-nn'),
     org:gve('e-org'),dep:gve('e-dep'),tit:gve('e-tit'),
     p1:gve('e-p1'),p2:gve('e-p2'),p3:gve('e-p3'),fx:gve('e-fx'),
@@ -1225,42 +1352,37 @@ function collectEdit(){
 
 async function saveEdit(e){
   e.preventDefault();
-  if(!CFG){ toast('Configurazione Shlink non disponibile','err'); return; }
-  if(editIdx===null){ toast('Errore interno','err'); return; }
-  const entry = vcStore.get(editIdx);
-  if(!entry){ toast('Errore: item non trovato','err'); return; }
-  const d = collectEdit();
-  if(!d.fn){ toast('Nome obbligatorio','err'); return; }
-
-  const btn = document.getElementById('edit-sbtn');
-  btn.disabled = true;
-  btn.innerHTML = `<div class="spin" style="width:16px;height:16px;border-width:2px;margin:0"></div> Salvataggio…`;
-
+  if(!CFG){toast('Configurazione Shlink non disponibile','err');return;}
+  if(editIdx===null){toast('Errore interno','err');return;}
+  const entry=vcStore.get(editIdx);
+  if(!entry){toast('Errore: item non trovato','err');return;}
+  const d=collectEdit();
+  if(!d.fn){toast('Nome obbligatorio','err');return;}
+  const btn=document.getElementById('edit-sbtn');
+  btn.disabled=true;
+  btn.innerHTML=`<div class="spin" style="width:16px;height:16px;border-width:2px;margin:0"></div> Salvataggio…`;
   try{
-    const vcStr = buildVC(d);
-    const enc = btoa(unescape(encodeURIComponent(vcStr)));
-    const fname = d.dn||`${d.fn} ${d.ln}`;
-    const newLongUrl = `${PAGE_URL}?vc=${encodeURIComponent(enc)}`;
-
-    // Aggiorna via PATCH Shlink v3
-    const r = await fetch(`${CFG.url}/rest/v3/short-urls/${entry.sc}`, {
-      method:'PATCH',
-      headers: aHdr(),
-      body: JSON.stringify({ longUrl: newLongUrl, title: fname })
+    const vcStr=buildVC(d);
+    const enc=b64Encode(vcStr);
+    const fname=d.dn||`${d.fn} ${d.ln}`.trim();
+    const newLongUrl=`${PAGE_URL}?vc=${encodeURIComponent(enc)}`;
+    const r=await fetch(`${CFG.url}/rest/v3/short-urls/${entry.sc}`,{
+      method:'PATCH',headers:aHdr(),
+      body:JSON.stringify({longUrl:newLongUrl,title:fname})
     });
-    const j = await r.json().catch(()=>({}));
+    const j=await r.json().catch(()=>({}));
     if(!r.ok) throw new Error(j.detail||j.title||'Errore '+r.status);
-
-    toast(`"${fname}" aggiornata!`, 'ok');
+    toast(`"${fname}" aggiornata!`,'ok');
     closeEdit();
     loadSaved();
   }catch(err){
-    document.getElementById('edit-msg').innerHTML =
+    document.getElementById('edit-msg').innerHTML=
       `<div class="err-box"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>${esc(err.message)}</span></div>`;
+    document.getElementById('edit-msg').scrollIntoView({behavior:'smooth'});
     toast('Errore: '+err.message,'err');
   }finally{
-    btn.disabled = false;
-    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Salva modifiche`;
+    btn.disabled=false;
+    btn.innerHTML=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Salva modifiche`;
   }
 }
 </script>
